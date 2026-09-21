@@ -476,6 +476,7 @@ function unlockAudio(){
     if(c.state==="running") AUDIO_READY=true;
   }catch(e){}
   try{ ensureBuffer("geld"); ensureBuffer("kiste"); }catch(e){}
+  if(!IN_FRAME){ try{ mediaFor("geld"); mediaFor("kiste"); }catch(e){} }
 }
 document.addEventListener("touchend",unlockAudio,true);
 /* Nach dem Zurückkehren in die App die Tonausgabe neu freigeben */
@@ -701,8 +702,57 @@ function synthBier(){
 }
 
 /* Datei bevorzugen, sonst den erzeugten Klang nehmen */
-function playKaching(){ if(!S.sound) return; withAudio(function(){ if(!playFile("geld")) synthKaching(); }); }
-function playBier(){ if(!S.sound) return; withAudio(function(){ if(!playFile("kiste")) synthBier(); }); }
+/* Als eigenständige App spielt der Mediaplayer des iPhones die Töne – der ist auf
+   iOS am zuverlässigsten. Im Claude-Chat bleibt es beim Klangbaukasten, der dort läuft. */
+var IN_FRAME=(function(){ try{ return window.self!==window.top; }catch(e){ return true; } })();
+var MEDIA={geld:null,kiste:null}, MEDIA_SRC={geld:"",kiste:""};
+var TON={weg:"",fehler:""};
+function blobUrlFrom(dataUrl){
+  try{
+    var mime=(dataUrl.match(/^data:([^;,]+)/)||[])[1]||"audio/mpeg";
+    return URL.createObjectURL(new Blob([new Uint8Array(urlToBytes(dataUrl))],{type:mime}));
+  }catch(e){ return dataUrl; }
+}
+function mediaFor(kind){
+  var src=(S.audio&&S.audio[kind])||DEFAULT_AUDIO[kind]||"";
+  if(!src) return null;
+  if(!MEDIA[kind]||MEDIA_SRC[kind]!==src){
+    try{
+      if(MEDIA[kind]&&MEDIA[kind]._blob) URL.revokeObjectURL(MEDIA[kind]._blob);
+      var u=blobUrlFrom(src), el=new Audio();
+      el.preload="auto"; el.setAttribute("playsinline","");
+      el._blob=(u.indexOf("blob:")===0)?u:null;
+      el.src=u; el.load();
+      MEDIA[kind]=el; MEDIA_SRC[kind]=src;
+    }catch(e){ return null; }
+  }
+  return MEDIA[kind];
+}
+function playMedia(kind,ersatz){
+  var el=mediaFor(kind);
+  if(!el){ ersatz(); return; }
+  try{ el.pause(); }catch(e){}
+  try{ el.currentTime=0; }catch(e){}
+  el.volume=1;
+  var pr;
+  try{ pr=el.play(); }catch(e){ TON.fehler=e.name||String(e); ersatz(); return; }
+  if(pr&&pr.then){
+    pr.then(function(){ TON.weg="Mediaplayer"; TON.fehler=""; renderAudioState(); },
+            function(err){ TON.fehler=(err&&err.name)||String(err); ersatz(); });
+  } else { TON.weg="Mediaplayer"; }
+}
+function webKlang(kind){
+  return function(){
+    withAudio(function(){
+      if(playFile(kind)) TON.weg="Klangbaukasten (Datei)";
+      else { if(kind==="geld") synthKaching(); else synthBier(); TON.weg="Klangbaukasten (erzeugt)"; }
+      renderAudioState();
+    });
+  };
+}
+/* force: beim Probehören auch dann abspielen, wenn die Glocke aus ist */
+function playKaching(force){ if(!S.sound&&!force) return; if(IN_FRAME) webKlang("geld")(); else playMedia("geld",webKlang("geld")); }
+function playBier(force){ if(!S.sound&&!force) return; if(IN_FRAME) webKlang("kiste")(); else playMedia("kiste",webKlang("kiste")); }
 function playFor(e){ if(e.kind==="kiste") playBier(); else playKaching(); }
 
 /* ---------- Speichern ---------- */
@@ -1689,7 +1739,13 @@ function renderAudioState(){
   var txt={"running":"läuft","suspended":"pausiert – einmal irgendwo antippen",
            "interrupted":"vom iPhone unterbrochen – einmal irgendwo antippen"}[st]||st;
   var still=navigator.audioSession?" · Stummschalter wird übergangen":" · Stummschalter muss auf laut stehen";
-  el.textContent="Tonausgabe: "+txt+still;
+  var zeilen=["Tonausgabe: "+txt+still];
+  zeilen.push("Glocke oben: "+(S.sound?"an":"aus – Töne nur beim Probehören"));
+  zeilen.push("Abspielweg: "+(IN_FRAME?"Klangbaukasten (im Chat)":"Mediaplayer, sonst Klangbaukasten"));
+  if(TON.weg) zeilen.push("Zuletzt gespielt über: "+TON.weg);
+  if(TON.fehler) zeilen.push("Letzte Meldung vom iPhone: "+TON.fehler);
+  el.textContent=zeilen.join("\n");
+  el.style.whiteSpace="pre-line";
 }
 function renderAudio(){
   var box=$("audioRows"); box.innerHTML="";
@@ -1705,7 +1761,7 @@ function renderAudio(){
     var row=document.createElement("div");
     row.style.cssText="display:flex;gap:14px;margin-top:10px";
     var b1=document.createElement("button"); b1.className="link"; b1.textContent="Anhören";
-    b1.onclick=function(){ unlockAudio(); if(r[0]==="geld") playKaching(); else playBier(); };
+    b1.onclick=function(){ unlockAudio(); if(r[0]==="geld") playKaching(true); else playBier(true); };
     var b2=document.createElement("button"); b2.className="link"; b2.textContent="Datei wählen";
     b2.onclick=function(){ audioTarget=r[0]; $("audioFile").click(); };
     row.appendChild(b1); row.appendChild(b2);
@@ -1993,7 +2049,7 @@ $("audioFile").onchange=function(ev){
     S.audio[audioTarget]=String(rd.result);
     save(); renderAudio();
     unlockAudio();
-    if(audioTarget==="geld") playKaching(); else playBier();
+    if(audioTarget==="geld") playKaching(true); else playBier(true);
   };
   rd.readAsDataURL(file);
 };
