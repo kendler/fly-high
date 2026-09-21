@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Kasse">
-<meta name="theme-color" content="#10201B">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#10201B">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F3F0E8">
 <title>Mannschaftskasse – DJK Nieder-Olm fly high</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
@@ -16,102 +17,172 @@
   :root{
     --base:#10201B; --board:#17302A; --board2:#1D3A33; --line:#2B5147;
     --ink:#F2EDE1; --dim:#8FA79C; --amber:#DFA24E; --mint:#79C98D; --rust:#E0653A;
+    --bar:rgba(20,40,34,.84); --shadow:0 -8px 40px rgba(0,0,0,.45); --tabh:62px;
+  }
+  /* Heller Modus folgt der iPhone-Einstellung – am Spielfeld in der Sonne besser lesbar */
+  @media (prefers-color-scheme: light){
+    :root{
+      --base:#F3F0E8; --board:#FFFFFF; --board2:#ECE7DC; --line:#DDD6C7;
+      --ink:#17261F; --dim:#697770; --amber:#A8741F; --mint:#2E8A56; --rust:#C2512B;
+      --bar:rgba(250,248,243,.86); --shadow:0 -8px 40px rgba(0,0,0,.16);
+    }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--base)}
-  .app{background:var(--base);color:var(--ink);min-height:100vh;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  .wrap{max-width:560px;margin:0 auto;padding:0 20px 48px}
-  header{display:flex;align-items:center;gap:14px;padding:24px 0 16px}
-  header img{width:68px;height:68px;object-fit:contain;display:block}
+  html,body{margin:0;background:var(--base);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  .app{background:var(--base);color:var(--ink);min-height:100vh}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px calc(var(--tabh) + 44px + env(safe-area-inset-bottom))}
+
+  /* Kopf mit großem Titel */
+  header{padding:calc(10px + env(safe-area-inset-top)) 0 4px}
+  .topbar{display:flex;align-items:center;gap:10px;min-height:44px}
   .logoBtn{position:relative;flex:0 0 auto;background:none;border:0;padding:0}
-  .logoX{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:99px;
-    background:var(--board2);color:var(--dim);border:1px solid var(--line);font-size:13px;line-height:1;padding:0}
-  .sound{margin-left:auto;flex:0 0 auto;width:42px;height:42px;border-radius:99px;font-size:18px;
-    background:var(--board2);color:var(--ink);border:1px solid var(--line);padding:0}
-  .club{color:var(--amber);font-weight:800;font-size:13px;letter-spacing:1px}
-  .sub{color:var(--dim);font-size:13px}
-  h1{font-size:25px;font-weight:700;margin:4px 0 0}
-  h2{font-size:18px;font-weight:700;margin:0 0 14px}
+  .logoBtn img{width:40px;height:40px;object-fit:contain;display:block}
+  .logoX{position:absolute;top:2px;left:34px;width:20px;height:20px;border-radius:99px;
+    background:var(--board2);color:var(--dim);border:0;font-size:12px;line-height:1;padding:0;z-index:2}
+  .clubline{flex:1;min-width:0;line-height:1.2}
+  .club{color:var(--amber);font-weight:700;font-size:14px}
+  .sub{color:var(--dim);font-size:14px}
+  .iconBtn{flex:0 0 auto;width:36px;height:36px;border-radius:99px;border:0;background:var(--board2);
+    color:var(--ink);font-size:16px;display:flex;align-items:center;justify-content:center;padding:0}
+  .iconBtn.plus{background:var(--amber);color:var(--base);font-size:26px;font-weight:300;line-height:1;padding-bottom:3px}
+  h1{font-size:34px;font-weight:800;letter-spacing:-.6px;margin:10px 0 14px}
+  h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.2px}
   h3{font-size:15px;font-weight:700;margin:0 0 10px;color:var(--amber)}
-  .card{background:var(--board);border:1px solid var(--line);border-radius:18px;padding:20px}
-  .stand{color:var(--amber);font-size:42px;font-weight:800;line-height:1.1}
+
+  /* Karten und Listen im Stil gruppierter iOS-Tabellen */
+  .card{background:var(--board);border:0.5px solid var(--line);border-radius:16px;padding:18px}
+  .group{background:var(--board);border:0.5px solid var(--line);border-radius:14px;overflow:hidden}
+  .group:empty,.group ul:empty{border:0}
+  .grpLbl{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin:28px 4px 8px}
+  .listHead{display:flex;justify-content:space-between;align-items:baseline;margin:28px 2px 10px}
+  .hint{font-size:12.5px;color:var(--dim);margin:10px 2px}
+
+  .stand{color:var(--amber);font-size:42px;font-weight:800;line-height:1.1;letter-spacing:-.5px}
+  .stand2{font-size:32px;font-weight:800;line-height:1.1;color:var(--ink)}
   .lbl{color:var(--dim);font-size:14px}
-  .bar{height:10px;border-radius:99px;background:var(--base);display:flex;overflow:hidden;margin-top:16px}
+  .bar{height:10px;border-radius:99px;background:var(--board2);display:flex;overflow:hidden;margin-top:16px}
   .row{display:flex;justify-content:space-between;font-size:14px;margin-top:12px}
-  .meta{display:flex;gap:16px;color:var(--dim);font-size:13px;margin-top:12px;flex-wrap:wrap}
-  .crates{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);
-    display:flex;justify-content:space-between;align-items:baseline}
-  .crateBig{color:var(--mint);font-size:22px;font-weight:800}
-  nav{display:flex;gap:6px;padding:20px 0 4px;flex-wrap:wrap}
-  .tab{padding:9px 14px;font-size:14px;font-weight:600;border-radius:12px;
-    background:var(--board2);color:var(--ink);border:1px solid var(--line);font-family:inherit}
-  .tab.on{background:var(--ink);color:var(--base);border-color:var(--ink)}
+  .meta{display:flex;gap:16px;color:var(--dim);font-size:13px;margin-top:10px;flex-wrap:wrap}
+  .section2{margin-top:18px;padding-top:16px;border-top:0.5px solid var(--line)}
+  .bestand{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:14px;
+    padding:10px 12px;border-radius:10px;background:var(--board2)}
+  .bestandVal{font-weight:800;font-size:17px}
+
+  /* Eingaben */
   label{display:block;margin-bottom:16px}
   label span.cap{display:block;margin-bottom:8px;color:var(--dim);font-size:14px}
-  input,select{width:100%;font-size:16px;padding:12px 14px;border-radius:12px;background:var(--board2);
-    color:var(--ink);border:1px solid var(--line);outline:none;-webkit-appearance:none;appearance:none;
-    font-family:inherit}
+  input,select{width:100%;font-size:17px;padding:12px 14px;border-radius:12px;background:var(--board);
+    color:var(--ink);border:0.5px solid var(--line);outline:none;-webkit-appearance:none;appearance:none;font-family:inherit}
   .segs{display:flex;gap:8px;flex-wrap:wrap}
-  .seg{flex:1 1 82px;min-width:82px;padding:11px 8px;font-size:15px;font-weight:600;border-radius:12px;
-    border:1px solid var(--line);background:var(--board2);color:var(--ink);font-family:inherit}
-  .go{width:100%;padding:14px;font-size:16px;font-weight:700;border-radius:12px;border:0;
-    background:var(--amber);color:var(--base);font-family:inherit}
-  .ghost{padding:14px 16px;font-size:16px;border-radius:12px;background:none;color:var(--ink);
-    border:1px solid var(--line);font-family:inherit}
-  ul{list-style:none;padding:0;margin:0}
-  li{padding:14px 0;border-bottom:1px solid var(--line)}
-  .dot{width:10px;height:10px;border-radius:99px;flex:0 0 auto;margin-top:6px}
-  .chip{font-size:12px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:none;
-    font-family:inherit}
-  .chip.solid{border:0;font-weight:600;color:var(--base)}
-  .link{background:none;border:0;color:var(--dim);font-size:14px;padding:0;font-family:inherit}
-  .filters{display:flex;gap:6px}
-  .filt{padding:6px 10px;font-size:13px;border-radius:9px;background:none;color:var(--dim);
-    border:1px solid var(--line);font-family:inherit}
-  .filt.on{background:var(--ink);color:var(--base);border-color:var(--ink)}
-  canvas.board{width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--line)}
-  .share{width:100%;margin-top:12px;padding:13px;font-size:15px;font-weight:700;border-radius:12px;
-    border:0;background:var(--mint);color:var(--base);font-family:inherit}
-  .textshare{width:100%;padding:13px;font-size:15px;border-radius:12px;background:none;color:var(--ink);
-    border:1px solid var(--line);font-family:inherit}
+  .seg{flex:1 1 72px;min-width:72px;padding:11px 8px;font-size:15px;font-weight:600;border-radius:12px;
+    border:0.5px solid var(--line);background:var(--board);color:var(--ink)}
+  .go{width:100%;padding:15px;font-size:17px;font-weight:700;border-radius:14px;border:0;
+    background:var(--amber);color:var(--base)}
+  .bigAdd{margin-top:14px}
+  .ghost{padding:14px 16px;font-size:16px;border-radius:12px;background:none;color:var(--ink);border:0.5px solid var(--line)}
+  .textshare{width:100%;padding:13px;font-size:15px;border-radius:12px;background:var(--board);color:var(--ink);border:0.5px solid var(--line)}
+  .share{width:100%;margin-top:12px;padding:13px;font-size:15px;font-weight:700;border-radius:12px;border:0;
+    background:var(--mint);color:var(--base)}
+  .openshare{width:100%;margin-top:10px;padding:13px;font-size:15px;font-weight:700;border-radius:14px;border:0;
+    background:var(--rust);color:var(--base)}
+  .dangerBtn{width:100%;margin-top:10px;padding:14px;font-size:16px;font-weight:600;border-radius:14px;
+    border:0;background:var(--board2);color:var(--rust)}
+  .link{background:none;border:0;color:var(--dim);font-size:14px;padding:0}
+  .warn{color:var(--rust);font-size:14px;margin:8px 0 12px}
   .hide{display:none !important}
-  .warn{color:var(--rust);font-size:14px;margin:0 0 12px}
-  .rank{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+
+  /* Listen */
+  ul{list-style:none;padding:0;margin:0}
+  li{padding:14px 0;border-bottom:0.5px solid var(--line)}
+  .group li{padding:12px 14px}
+  .group li:last-child{border-bottom:0}
+  .dot{width:10px;height:10px;border-radius:99px;flex:0 0 auto;margin-top:6px}
+  .chip{font-size:12px;padding:4px 8px;border-radius:8px;border:0.5px solid var(--line);background:none;color:var(--ink)}
+  .chip.solid{border:0;font-weight:600;color:#10201B}
+
+  /* Wischen wie in Mail */
+  li.sw{position:relative;overflow:hidden;padding:0}
+  .swBg{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-weight:700;font-size:15px;color:#fff;background:var(--board2)}
+  .swBg[data-side="right"]{background:#2E8A56}
+  .swBg[data-side="left"]{background:#C2512B}
+  .swBg[data-side="right"] .swR,.swBg[data-side="left"] .swL{visibility:hidden}
+  .swBg.armed span{transform:scale(1.12)}
+  .swBg span{transition:transform .15s}
+  .swFg{position:relative;background:var(--board);padding:12px 14px;will-change:transform;touch-action:pan-y}
+
+  /* Segmentsteuerung wie in iOS */
+  .segctl{display:flex;background:var(--board2);border-radius:10px;padding:2px;gap:2px}
+  .segctl button{flex:1;border:0;background:transparent;color:var(--ink);font-size:13.5px;font-weight:600;
+    padding:7px 6px;border-radius:8px}
+  .segctl button.on{background:var(--board);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+  .filt{padding:7px 12px;font-size:13px;border-radius:99px;background:var(--board);color:var(--dim);border:0.5px solid var(--line)}
+  .filt.on{background:var(--amber);color:#10201B;border-color:var(--amber)}
+
+  /* Tab-Leiste */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:space-around;
+    padding:6px 4px calc(4px + env(safe-area-inset-bottom));background:var(--bar);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+    border-top:0.5px solid var(--line)}
+  .tabbtn{flex:1;max-width:96px;background:none;border:0;padding:3px 0 2px;display:flex;flex-direction:column;
+    align-items:center;gap:2px;color:var(--dim);font-size:10.5px;font-weight:600}
+  .tabbtn svg{width:26px;height:26px}
+  .tabbtn.on{color:var(--amber)}
+
+  /* Blatt von unten */
+  .sheetWrap{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;
+    background:rgba(0,0,0,0);transition:background .28s}
+  .sheetWrap.open{background:rgba(0,0,0,.45)}
+  .sheet{width:100%;max-width:560px;max-height:93vh;background:var(--base);color:var(--ink);
+    border-radius:16px 16px 0 0;display:flex;flex-direction:column;box-shadow:var(--shadow);
+    transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1);padding-bottom:env(safe-area-inset-bottom)}
+  .sheetWrap.open .sheet{transform:translateY(0)}
+  .grabber{width:38px;height:5px;border-radius:99px;background:var(--line);margin:8px auto 2px}
+  .sheetHead{display:flex;align-items:center;justify-content:space-between;padding:4px 10px 8px;border-bottom:0.5px solid var(--line)}
+  .sheetTitle{font-weight:700;font-size:17px}
+  .navBtn{background:none;border:0;color:var(--amber);font-size:17px;padding:8px 6px}
+  .navBtn.strong{font-weight:700}
+  .sheetBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 16px 22px}
+  .sectLbl{font-size:15px;font-weight:700;margin:18px 0 10px;display:flex;align-items:baseline;gap:8px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{border:1.5px solid var(--line);background:var(--board);color:var(--ink);border-radius:99px;
+    padding:9px 15px;font-size:15px;font-weight:600}
+  .pill.on{background:var(--amber);border-color:var(--amber);color:#10201B}
+  .pill.neu{border-style:dashed;color:var(--dim)}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tile{text-align:left;background:var(--board);border:1.5px solid var(--line);border-radius:14px;padding:11px 12px;
+    color:var(--ink);min-height:66px;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+  .tile b{font-size:14.5px;font-weight:650;line-height:1.25}
+  .tile span{font-size:13px;color:var(--dim)}
+  .tile.kiste span{color:var(--mint)}
+  .tile.frei{border-style:dashed}
+  .tile.on{border-color:var(--amber);background:var(--board2)}
+  .detailsBtn{background:none;border:0;color:var(--amber);font-size:15px;font-weight:600;padding:16px 0 8px}
+
+  /* Hinweis mit Rückgängig */
+  .toast{position:fixed;left:50%;bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom));z-index:70;
+    transform:translate(-50%,16px);opacity:0;transition:transform .25s,opacity .25s;
+    background:#1C1C1E;color:#fff;border-radius:14px;padding:12px 16px;display:flex;gap:18px;align-items:center;
+    font-size:15px;box-shadow:0 8px 30px rgba(0,0,0,.35);width:max-content;max-width:calc(100% - 32px)}
+  .toast.in{transform:translate(-50%,0);opacity:1}
+  .toast button{background:none;border:0;color:#F5B94F;font-weight:700;font-size:15px;padding:0;flex:0 0 auto}
+
+  /* Auswertung, Rangliste, Karten */
+  canvas.board{width:100%;height:auto;display:block;border-radius:16px;border:0.5px solid var(--line)}
+  .rank{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:0.5px solid var(--line)}
   .rankPos{font-size:20px;width:32px;text-align:center;flex:0 0 auto}
   .rankName{flex:1;min-width:0;font-weight:600}
-  .duel{display:flex;height:34px;border-radius:10px;overflow:hidden;margin:12px 0 8px;background:var(--base)}
-  .duel div{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
-    color:var(--base)}
+  .duel{display:flex;height:34px;border-radius:10px;overflow:hidden;margin:12px 0 8px;background:var(--board2)}
+  .duel div{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#10201B}
   .overlay{position:fixed;inset:0;background:rgba(6,15,12,.95);display:flex;align-items:center;
-    justify-content:center;padding:20px;z-index:50}
+    justify-content:center;padding:20px;z-index:80}
   .overlay img{width:100%;border-radius:16px}
-  footer{color:var(--dim);font-size:12px;padding-top:8px}
+  footer{color:var(--dim);font-size:12px;padding:18px 4px 0;text-align:center}
   #txtArea{width:100%;height:210px;font-size:13px;padding:12px;border-radius:12px;
-    background:var(--board2);color:var(--ink);border:1px solid var(--line);
-    font-family:ui-monospace,Menlo,monospace;-webkit-appearance:none}
-
-  /* Setzt sich gegen Schriftfarben der Anzeigeumgebung durch */
-  .app{color:var(--ink)!important;background:var(--base)!important}
-  .app h1,.app h2{color:var(--ink)!important}
-  .app h3{color:var(--amber)!important}
-  .app .club,.app .stand{color:var(--amber)!important}
-  .app .sub,.app .lbl,.app .link,.app span.cap,.app footer{color:var(--dim)!important}
-  .app .card{background:var(--board)!important}
-  .app .tab{color:var(--ink)!important;background:var(--board2)!important}
-  .app .tab.on{color:var(--base)!important;background:var(--ink)!important}
-  .app .filt{color:var(--dim)!important;background:transparent!important}
-  .app .filt.on{color:var(--base)!important;background:var(--ink)!important}
-  .app input,.app select{color:var(--ink)!important;background:var(--board2)!important}
-  .app .go{color:var(--base)!important;background:var(--amber)!important}
-  .app .share{color:var(--base)!important;background:var(--mint)!important}
-  .app .ghost,.app .textshare{color:var(--ink)!important;background:transparent!important}
-  .app .sound{color:var(--ink)!important;background:var(--board2)!important}
-  .app .logoX{color:var(--dim)!important;background:var(--board2)!important}
-  .app .crateBig{color:var(--mint)!important}
-  .openshare{width:100%;margin-top:12px;padding:13px;font-size:15px;font-weight:700;border-radius:12px;
-    border:0;font-family:inherit}
-  .app .openshare{color:var(--base)!important;background:var(--rust)!important}
+    background:#1D3A33;color:#F2EDE1;border:0;font-family:ui-monospace,Menlo,monospace;-webkit-appearance:none}
 </style>
 </head>
 <body>
@@ -119,43 +190,42 @@
 <div class="app">
 <div class="wrap">
   <header>
-    <button class="logoBtn" id="logoBtn" aria-label="Anderes Logo wählen">
-      <img id="logoImg" alt="Vereinswappen">
-    </button>
-    <button class="logoX hide" id="logoReset" aria-label="Zurück zum Vereinswappen">&times;</button>
-    <div>
-      <div><span class="club">DJK NIEDER-OLM</span> <span class="sub">fly high</span></div>
-      <h1>Mannschaftskasse</h1>
+    <div class="topbar">
+      <button class="logoBtn" id="logoBtn" aria-label="Anderes Logo wählen"><img id="logoImg" alt="Vereinswappen"></button>
+      <button class="logoX hide" id="logoReset" aria-label="Zurück zum Vereinswappen">&times;</button>
+      <div class="clubline"><span class="club">DJK Nieder-Olm</span> <span class="sub">fly high</span></div>
+      <button class="iconBtn" id="soundBtn" aria-label="Ton an oder aus">🔔</button>
+      <button class="iconBtn plus" id="plusBtn" aria-label="Neuer Eintrag">+</button>
     </div>
-    <button class="sound" id="soundBtn" aria-label="Ton an oder aus">🔔</button>
+    <h1 id="pageTitle">Kasse</h1>
     <input type="file" id="logoFile" accept="image/*" class="hide">
   </header>
 
-  <div class="card">
-    <div class="lbl" id="standLbl">Kassenbestand</div>
+  <!-- ============ KASSE ============ -->
+  <section id="viewKasse">
+    <div class="card">
+    <div class="lbl" id="standLbl">Kasse gesamt</div>
     <div class="stand" id="stand">0,00 €</div>
     <div class="bar"><div id="barPaid" style="background:var(--mint)"></div><div id="barOpen" style="background:var(--rust)"></div></div>
     <div class="row"><span id="txtPaid" style="color:var(--mint)"></span><span id="txtOpen" style="color:var(--rust)"></span></div>
-    <div class="meta"><span id="cntA"></span><span id="cntE"></span><span id="cntP"></span></div>
-    <div class="crates">
-      <div><span class="crateBig" id="crateBig">0</span> <span class="lbl">Kisten insgesamt</span></div>
-      <span class="lbl" id="crateOpen"></span>
+    <div class="meta"><span id="cntMoney"></span></div>
+    <div class="bestand hide" id="bestandRow">
+      <span class="lbl" id="bestandLbl"></span>
+      <span class="bestandVal" id="bestandVal"></span>
+    </div>
+
+    <div class="section2">
+      <div class="lbl">Kisten gesamt</div>
+      <div class="stand2" id="crateBig">0</div>
+      <div class="bar"><div id="barDel" style="background:var(--mint)"></div><div id="barCOpen" style="background:var(--rust)"></div></div>
+      <div class="row"><span id="txtDel" style="color:var(--mint)"></span><span id="txtCOpen" style="color:var(--rust)"></span></div>
+      <div class="meta"><span id="cntCrates"></span></div>
     </div>
   </div>
 
-  <button class="openshare hide" id="shareOpen">Offene Posten in WhatsApp teilen</button>
+    <button class="go bigAdd" id="addEntryBtn">+ Verstoß eintragen</button>
+    <button class="openshare hide" id="shareOpen">Offene Posten in WhatsApp teilen</button>
 
-  <nav>
-    <button class="tab on" id="tabKasse">Erfassen</button>
-    <button class="tab" id="tabAusgaben">Ausgaben</button>
-    <button class="tab" id="tabGraf">Grafiken</button>
-    <button class="tab" id="tabRang">Rangliste</button>
-    <button class="tab" id="tabKarten">Karten</button>
-    <button class="tab" id="tabRegeln">Katalog</button>
-  </nav>
-
-  <!-- ============ ERFASSEN ============ -->
-  <section id="viewKasse">
     <div class="card hide" id="emptyBanner" style="margin-top:16px;border-color:var(--amber)">
       <div style="font-weight:700;margin-bottom:8px">Kasse ist leer</div>
       <p class="lbl" style="margin:0 0 14px;font-size:14px">
@@ -163,97 +233,28 @@
       <button class="go" id="bannerPaste">Textsicherung einfügen</button>
     </div>
 
-    <div class="card" id="formCard" style="margin-top:16px">
-      <h2 id="formTitle">Neuer Eintrag</h2>
-
-      <label><span class="cap">Name</span>
-        <select id="nameSel" class="hide"></select>
-        <input type="text" id="nameNew" placeholder="Vorname eintippen" style="margin-top:8px">
-      </label>
-
-      <label><span class="cap">Regelverstoß</span>
-        <select id="ruleSel"></select>
-        <input type="text" id="ruleText" placeholder="Verstoß beschreiben" style="margin-top:8px">
-        <button type="button" class="link hide" id="addRuleBtn" style="margin-top:12px;font-size:14px"></button>
-      </label>
-
-      <label><span class="cap">Strafe</span><div class="segs" id="segKind"></div></label>
-
-      <div id="moneyBox">
-        <label><span class="cap">Betrag</span>
-          <input type="text" id="amount" inputmode="decimal" placeholder="z. B. 5 oder 7,50">
-        </label>
-        <label><span class="cap">Bezahlt in</span><div class="segs" id="segMethod"></div></label>
-      </div>
-
-      <div id="crateBox" class="hide">
-        <label><span class="cap">Anzahl Kisten</span>
-          <input type="text" id="crates" inputmode="numeric" placeholder="1">
-        </label>
-      </div>
-
-      <label><span class="cap" id="paidCap">Schon bezahlt?</span><div class="segs" id="segPaid"></div></label>
-      <label><span class="cap">Altersklasse</span><div class="segs" id="segAge"></div></label>
-
-      <p class="warn hide" id="warn"></p>
-      <div style="display:flex;gap:8px">
-        <button class="go" id="save">In die Kasse eintragen</button>
-        <button class="ghost hide" id="cancel">Abbrechen</button>
-      </div>
-    </div>
-
-    <div style="padding-top:26px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0">Einträge</h2>
-        <div class="filters" id="filters"></div>
-      </div>
-      <ul id="list"></ul>
-      <p id="empty" class="lbl" style="font-size:15px">Hier steht gleich der erste Verstoß. Trag ihn oben ein.</p>
-
-      <p id="storeInfo" class="lbl" style="font-size:13px;margin-top:24px">Speicher noch nicht geprüft</p>
-      <p id="storeWarn" class="warn hide" style="margin-top:8px">
-        Dieses Gerät speichert gerade nicht dauerhaft. Bitte eine Sicherung anlegen.</p>
-      <div style="display:flex;gap:8px;margin-top:24px">
-        <button class="textshare" id="copyBtn">Als Text kopieren</button>
-        <button class="textshare" id="pasteBtn">Text einfügen</button>
-      </div>
-      <p id="backupInfo" class="lbl" style="font-size:13px;margin:10px 0 0">
-        Der Text enthält Einträge, Spieler und Katalog – ideal für die Notizen-App.</p>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="textshare" id="backup">Als Datei sichern</button>
-        <button class="textshare" id="restoreBtn">Datei laden</button>
-      </div>
-      <input type="file" id="restoreFile" accept="application/json,.json" class="hide">
-      <button class="textshare hide" id="wipe" style="margin-top:16px"></button>
-    </div>
+    <div class="listHead"><h2>Einträge</h2></div>
+    <div class="segctl" id="filters"></div>
+    <p class="hint" id="swipeHint">Nach rechts wischen: begleichen · nach links: löschen · antippen: bearbeiten</p>
+    <div class="group"><ul id="list"></ul></div>
+    <p id="empty" class="lbl" style="font-size:15px;margin-top:12px">Noch keine Einträge – tipp auf „Verstoß eintragen".</p>
   </section>
 
   <!-- ============ AUSGABEN ============ -->
-  <section id="viewAusgaben" class="hide" style="padding-top:16px">
-    <div class="card" id="exCard">
-      <h2 id="exTitle">Ausgabe erfassen</h2>
-      <label><span class="cap">Wofür</span>
-        <input type="text" id="exWhat" placeholder="z. B. Grillabend, Bowling, Trikotwäsche"></label>
-      <label><span class="cap">Betrag</span>
-        <input type="text" id="exAmount" inputmode="decimal" placeholder="z. B. 45,80"></label>
-      <label><span class="cap">Datum</span>
-        <input type="date" id="exDate" style="min-height:48px"></label>
-      <p class="warn hide" id="exWarn"></p>
-      <div style="display:flex;gap:8px">
-        <button class="go" id="exSave">Ausgabe eintragen</button>
-        <button class="ghost hide" id="exCancel">Abbrechen</button>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:26px 0 12px">
-      <h2 style="margin:0">Ausgaben</h2>
-      <span id="exTotal" style="font-weight:700;color:var(--rust)"></span>
-    </div>
-    <ul id="exList"></ul>
-    <p id="exEmpty" class="lbl" style="font-size:15px">Noch keine Ausgaben eingetragen.</p>
+  <section id="viewAusgaben" class="hide">
+    <button class="go bigAdd" id="addExpenseBtn" style="margin-top:0">+ Ausgabe eintragen</button>
+    <div class="listHead"><h2>Ausgaben</h2><span id="exTotal" style="font-weight:700;color:var(--rust)"></span></div>
+    <p class="hint">Nach links wischen: löschen · antippen: bearbeiten</p>
+    <div class="group"><ul id="exList"></ul></div>
+    <p id="exEmpty" class="lbl" style="font-size:15px;margin-top:12px">Noch keine Ausgaben eingetragen.</p>
   </section>
 
-  <!-- ============ GRAFIKEN ============ -->
-  <section id="viewGraf" class="hide" style="padding-top:16px">
+  <!-- ============ AUSWERTUNG ============ -->
+  <section id="viewAuswertung" class="hide">
+    <div class="segctl" id="auswSeg" style="margin-bottom:18px">
+      <button id="auswGraf" class="on">Grafiken</button><button id="auswRang">Rangliste</button>
+    </div>
+    <div id="viewGraf">
     <span class="cap lbl" style="display:block;margin-bottom:8px">Grundlage der Auswertung</span>
     <div class="segs" id="segBasis" style="margin-bottom:20px"></div>
 
@@ -273,17 +274,16 @@
       <button class="share" data-share="monthCrates">Als Bild teilen</button></div>
 
     <button class="textshare" id="shareText">Zahlen als Text in WhatsApp schicken</button>
-  </section>
-
-  <!-- ============ RANGLISTE ============ -->
-  <section id="viewRang" class="hide" style="padding-top:16px">
+  </div>
+    <div id="viewRang" class="hide">
     <div id="rangBody"></div>
     <div style="margin-top:24px"><canvas class="board" id="cvReview"></canvas>
       <button class="share" data-share="review">Rückblick teilen</button></div>
+  </div>
   </section>
 
   <!-- ============ KARTEN ============ -->
-  <section id="viewKarten" class="hide" style="padding-top:16px">
+  <section id="viewKarten" class="hide">
     <div id="cardPicker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px"></div>
     <p id="cardEmpty" class="lbl" style="font-size:15px">Sobald Spieler eingetragen sind, bekommt hier jeder seine Karte.</p>
     <div id="cardView" class="hide">
@@ -306,8 +306,9 @@
     <input type="file" id="photoFile" accept="image/*" class="hide">
   </section>
 
-  <!-- ============ KATALOG ============ -->
-  <section id="viewRegeln" class="hide" style="padding-top:16px">
+  <!-- ============ MEHR ============ -->
+  <section id="viewMehr" class="hide">
+    <div class="grpLbl" style="margin-top:4px">Strafenkatalog</div>
     <div class="card" id="ruleCard">
       <h2 id="rFormTitle">Regel hinzufügen</h2>
       <label><span class="cap">Verstoß</span>
@@ -323,10 +324,9 @@
         <button class="ghost hide" id="rCancel">Abbrechen</button>
       </div>
     </div>
-    <h2 style="margin:26px 0 12px">Strafenkatalog</h2>
-    <ul id="rulesList"></ul>
+    <div class="group" style="margin-top:12px"><ul id="rulesList"></ul></div>
 
-    <h2 style="margin:30px 0 12px">Töne</h2>
+    <div class="grpLbl">Töne</div>
     <div class="card">
       <p class="lbl" style="margin:0 0 16px;font-size:14px">
         Eigene Aufnahmen ersetzen die eingebauten Klänge. Kurze MP3- oder M4A-Dateien bis etwa
@@ -335,11 +335,107 @@
       <p id="audioState" class="lbl" style="font-size:13px;margin:14px 0 0"></p>
     </div>
     <input type="file" id="audioFile" accept="audio/*" class="hide">
-  </section>
 
-  <footer>Alle Daten bleiben auf diesem Gerät.</footer>
+    <div class="grpLbl">Sicherung</div>
+    <div class="card">
+      <p id="storeInfo" class="lbl" style="font-size:13px;margin:0">Speicher noch nicht geprüft</p>
+      <p id="storeWarn" class="warn hide" style="margin-top:8px">
+        Dieses Gerät speichert gerade nicht dauerhaft. Bitte eine Sicherung anlegen.</p>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="textshare" id="copyBtn">Als Text kopieren</button>
+        <button class="textshare" id="pasteBtn">Text einfügen</button>
+      </div>
+      <p id="backupInfo" class="lbl" style="font-size:13px;margin:10px 0 0">
+        Der Text enthält Einträge, Spieler und Katalog – ideal für die Notizen-App.</p>
+    </div>
+
+    <div class="grpLbl">Saison</div>
+    <button class="textshare hide" id="wipe"></button>
+    <footer>Alle Daten bleiben auf diesem Gerät.</footer>
+  </section>
 </div>
 </div>
+
+<!-- ============ TAB-LEISTE ============ -->
+<nav class="tabbar">
+  <button class="tabbtn on" id="tabKasse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.5v5M18 9.5v5"/></svg><span>Kasse</span></button>
+  <button class="tabbtn" id="tabAusgaben"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 8h6M9 12h6M9 16h3.5"/></svg><span>Ausgaben</span></button>
+  <button class="tabbtn" id="tabAuswertung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="15.5" y="9" width="3" height="9" rx="1"/></svg><span>Auswertung</span></button>
+  <button class="tabbtn" id="tabKarten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3.5" width="12" height="16" rx="2.2"/><path d="M5 7.5v11a2.2 2.2 0 0 0 2.2 2.2H15"/></svg><span>Karten</span></button>
+  <button class="tabbtn" id="tabMehr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="12" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="16" cy="12" r="1.1" fill="currentColor"/></svg><span>Mehr</span></button>
+</nav>
+
+<!-- ============ BLATT: VERSTOSS ============ -->
+<div class="sheetWrap hide" id="sheetEntry">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <div class="sheetHead">
+      <button class="navBtn" id="cancel">Abbrechen</button>
+      <div class="sheetTitle" id="formTitle">Neuer Verstoß</div>
+      <button class="navBtn strong" id="saveTop">Eintragen</button>
+    </div>
+    <div class="sheetBody" id="formCard">
+      <div class="sectLbl">Wer? <span class="lbl" style="font-weight:500" id="nameHint">mehrere möglich</span></div>
+      <div class="pills" id="nameChips"></div>
+      <input type="text" id="nameNew" class="hide" placeholder="Vorname eintippen" style="margin-top:10px">
+
+      <div class="sectLbl" id="paidCap">Schon bezahlt?</div>
+      <div class="segs" id="segPaid"></div>
+      <div id="methodWrap"><div class="segs" id="segMethod" style="margin-top:8px"></div></div>
+
+      <div class="sectLbl">Was? <span class="lbl" style="font-weight:500" id="tileHint"></span></div>
+      <div class="tiles" id="ruleTiles"></div>
+      <select id="ruleSel" class="hide"></select>
+
+      <button type="button" class="detailsBtn" id="detailsBtn">Details anzeigen</button>
+      <div id="detailsBox" class="hide">
+        <label><span class="cap">Verstoß</span>
+          <input type="text" id="ruleText" placeholder="Verstoß beschreiben">
+          <button type="button" class="link hide" id="addRuleBtn" style="margin-top:12px;font-size:14px"></button>
+        </label>
+        <label><span class="cap">Strafe</span><div class="segs" id="segKind"></div></label>
+        <div id="moneyBox">
+          <label><span class="cap">Betrag</span>
+            <input type="text" id="amount" inputmode="decimal" placeholder="z. B. 5 oder 7,50"></label>
+        </div>
+        <div id="crateBox" class="hide">
+          <label><span class="cap">Anzahl Kisten</span>
+            <input type="text" id="crates" inputmode="numeric" placeholder="1"></label>
+        </div>
+        <label><span class="cap">Altersklasse</span><div class="segs" id="segAge"></div></label>
+      </div>
+
+      <p class="warn hide" id="warn"></p>
+      <button class="go" id="save">In die Kasse eintragen</button>
+      <button class="dangerBtn hide" id="delEntry">Eintrag löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BLATT: AUSGABE ============ -->
+<div class="sheetWrap hide" id="sheetExpense">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <div class="sheetHead">
+      <button class="navBtn" id="exCancel">Abbrechen</button>
+      <div class="sheetTitle" id="exTitle">Neue Ausgabe</div>
+      <button class="navBtn strong" id="exSaveTop">Sichern</button>
+    </div>
+    <div class="sheetBody" id="exCard">
+      <label><span class="cap">Wofür</span>
+        <input type="text" id="exWhat" placeholder="z. B. Grillabend, Bowling, Trikotwäsche"></label>
+      <label><span class="cap">Betrag</span>
+        <input type="text" id="exAmount" inputmode="decimal" placeholder="z. B. 45,80"></label>
+      <label><span class="cap">Datum</span>
+        <input type="date" id="exDate" style="min-height:48px"></label>
+      <p class="warn hide" id="exWarn"></p>
+      <button class="go" id="exSave">Ausgabe eintragen</button>
+      <button class="dangerBtn hide" id="exDel">Ausgabe löschen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast hide" id="toast"><span id="toastTxt"></span><button id="toastUndo">Rückgängig</button></div>
 
 <div class="overlay hide" id="txtOverlay">
   <div style="max-width:460px;width:100%">
@@ -372,7 +468,7 @@ var C = {base:"#10201B",board:"#17302A",board2:"#1D3A33",line:"#2B5147",
          ink:"#F2EDE1",dim:"#8FA79C",amber:"#DFA24E",mint:"#79C98D",rust:"#E0653A"};
 var SLICE = ["#DFA24E","#79C98D","#CE7F41","#5BA4CF","#C98BB9","#8FBF63",
              "#E4776B","#6FCFC3","#B8A3E0","#E8C87A","#9AD1D4","#D98CA0"];
-var METHODS = ["Bar","PayPal","Überwiesen"];
+var METHODS = ["Bar","PayPal"];
 var METHOD_ORDER = ["Bar","PayPal","Überwiesen","Wallet"];  /* Wallet nur noch für alte Einträge */
 var METHOD_COLOR = {Bar:"#79C98D",PayPal:"#5BA4CF","Überwiesen":"#B8A3E0",Wallet:"#DFA24E"};
 var AGE_COLOR = {"Ü40":"#CE7F41","U40":"#5BA4CF"};
@@ -423,7 +519,7 @@ function syncAddRule(){
   if(!frei) addRuleFlag=false;
   show($("addRuleBtn"),frei);
   $("addRuleBtn").textContent=(addRuleFlag?"☑":"☐")+" Als neue Regel in den Katalog aufnehmen";
-  $("addRuleBtn").style.setProperty("color", addRuleFlag?C.amber:C.dim, "important");
+  $("addRuleBtn").style.setProperty("color", addRuleFlag?V.amber:V.dim, "important");
 }
 function strafeText(isK,val,cr){ return isK?kisten(cr):eur(val); }
 /* Entfernt eine angehängte Strafe wie „(2,00 €)" oder „(1 Kiste)", andere Klammern bleiben */
@@ -804,14 +900,14 @@ function renderBackupInfo(){
     el.textContent=S.entries.length
       ? "Noch nie gesichert – bitte jetzt kopieren."
       : "Der Text enthält Einträge, Spieler und Katalog – ideal für die Notizen-App.";
-    el.style.color=S.entries.length?C.rust:C.dim;
+    el.style.color=S.entries.length?V.rust:V.dim;
     return;
   }
   var d=new Date(S.backupAt);
   var t="Zuletzt gesichert am "+d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})
        +" um "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
-  if(S.backupCount!==S.entries.length){ t+=" – seitdem geändert"; el.style.color=C.rust; }
-  else el.style.color=C.dim;
+  if(S.backupCount!==S.entries.length){ t+=" – seitdem geändert"; el.style.color=V.rust; }
+  else el.style.color=V.dim;
   el.textContent=t;
 }
 function merkeSicherung(){
@@ -1248,30 +1344,125 @@ function buildSeg(el,opts,colors,get,set){
 function paintSeg(el,val){
   Array.prototype.forEach.call(el.children,function(b){
     var on=b.dataset.v===val;
-    b.style.background=on?b.dataset.c:C.board2;
-    b.style.color=on?C.base:C.ink;
-    b.style.borderColor=on?b.dataset.c:C.line;
+    b.style.background=on?b.dataset.c:V.board;
+    b.style.color=on?"#10201B":V.ink;
+    b.style.borderColor=on?b.dataset.c:V.line;
   });
 }
 function $(id){return document.getElementById(id);}
+/* Farben der Oberfläche folgen dem hellen bzw. dunklen Modus; C bleibt für die Grafiken */
+var V={base:"var(--base)",board:"var(--board)",board2:"var(--board2)",line:"var(--line)",ink:"var(--ink)",
+       dim:"var(--dim)",amber:"var(--amber)",mint:"var(--mint)",rust:"var(--rust)"};
+function snapshot(){ return JSON.stringify({entries:S.entries,expenses:S.expenses,rules:S.rules,roster:S.roster}); }
+function restoreSnap(t){
+  var d=JSON.parse(t); S.entries=d.entries; S.expenses=d.expenses; S.rules=d.rules; S.roster=d.roster;
+  save(); render();
+}
+var toastTimer=null, toastUndo=null;
+function toast(txt,undo,ms){
+  $("toastTxt").textContent=txt; toastUndo=undo||null; show($("toastUndo"),!!undo);
+  var t=$("toast"); show(t,true); void t.offsetWidth; t.classList.add("in");
+  clearTimeout(toastTimer); toastTimer=setTimeout(hideToast,ms||5000);
+}
+function hideToast(){
+  var t=$("toast"); t.classList.remove("in"); toastUndo=null;
+  setTimeout(function(){ if(!t.classList.contains("in")) show(t,false); },260);
+}
+function openSheet(id){
+  var w=$(id); show(w,true); void w.offsetWidth; w.classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function closeSheet(id){
+  var w=$(id); w.classList.remove("open"); document.body.style.overflow="";
+  setTimeout(function(){ if(!w.classList.contains("open")) show(w,false); },330);
+}
+/* Blatt am Griff nach unten ziehen schließt es */
+function attachSheetDrag(id){
+  var w=$(id), sh=w.querySelector(".sheet"), y0=0, dy=0, drag=false;
+  [w.querySelector(".grabber"),w.querySelector(".sheetHead")].forEach(function(h){
+    h.addEventListener("touchstart",function(ev){
+      if(ev.target.closest&&ev.target.closest("button")) return;
+      drag=true; y0=ev.touches[0].clientY; dy=0; sh.style.transition="none";
+    },{passive:true});
+    h.addEventListener("touchmove",function(ev){
+      if(!drag) return; dy=Math.max(0,ev.touches[0].clientY-y0); sh.style.transform="translateY("+dy+"px)";
+    },{passive:true});
+    h.addEventListener("touchend",function(){
+      if(!drag) return; drag=false; sh.style.transition=""; sh.style.transform="";
+      if(dy>90) closeSheet(id);
+    });
+  });
+  w.addEventListener("click",function(ev){ if(ev.target===w) closeSheet(id); });
+}
+function swipeBg(links,rechts){
+  var bg=document.createElement("div"); bg.className="swBg";
+  var a=document.createElement("span"); a.className="swL"; a.textContent=links;
+  var b=document.createElement("span"); b.className="swR"; b.textContent=rechts;
+  bg.appendChild(a); bg.appendChild(b); return bg;
+}
+/* Wischen wie in Mail: nach rechts = onRight, nach links = onLeft, Tippen = onTap */
+function attachSwipe(fg,bg,onRight,onLeft,onTap){
+  var x0=0,y0=0,dx=0,drag=false,decided=false,horiz=false,moved=false;
+  fg.addEventListener("touchstart",function(ev){
+    var t=ev.touches[0]; x0=t.clientX; y0=t.clientY; dx=0; drag=true; decided=false; horiz=false; moved=false;
+    fg.style.transition="none";
+  },{passive:true});
+  fg.addEventListener("touchmove",function(ev){
+    if(!drag) return;
+    var t=ev.touches[0], mx=t.clientX-x0, my=t.clientY-y0;
+    if(!decided){ if(Math.abs(mx)<8&&Math.abs(my)<8) return; decided=true; horiz=Math.abs(mx)>Math.abs(my); }
+    if(!horiz) return;
+    if(ev.cancelable) ev.preventDefault();
+    moved=true;
+    dx=mx; if(!onRight) dx=Math.min(0,dx); if(!onLeft) dx=Math.max(0,dx);
+    fg.style.transform="translateX("+dx+"px)";
+    bg.dataset.side=dx>0?"right":"left";
+    bg.classList.toggle("armed",Math.abs(dx)>90);
+  },{passive:false});
+  fg.addEventListener("touchend",function(){
+    if(!drag) return; drag=false;
+    fg.style.transition="transform .22s ease";
+    if(horiz&&dx>90&&onRight){ fg.style.transform="translateX(0)"; onRight(); }
+    else if(horiz&&dx<-90&&onLeft){ fg.style.transform="translateX(-110%)"; setTimeout(onLeft,190); }
+    else fg.style.transform="translateX(0)";
+    setTimeout(function(){ moved=false; },60);
+  });
+  fg.addEventListener("click",function(ev){
+    if(moved) return;
+    if(ev.target.closest&&ev.target.closest("button")) return;
+    if(onTap) onTap();
+  });
+}
 function show(el,yes){el.classList.toggle("hide",!yes);}
 
 /* ---------- Oberfläche ---------- */
 function render(){
   var st=stats();
-  $("stand").textContent=eur(st.bestand);
-  $("stand").style.setProperty("color", st.bestand<0?C.rust:C.amber, "important");
-  $("cntA").textContent=st.spent>0?(eur(st.spent)+" ausgegeben"):"";
-  show($("cntA"), st.spent>0);
-  var sh=st.all>0?st.paid/st.all:0;
-  $("barPaid").style.width=(sh*100)+"%";
-  $("barOpen").style.width=((1-sh)*100)+"%";
+  function leute(list){ var o={}; list.forEach(function(e){o[e.name]=1;}); return Object.keys(o).length; }
+  function vonSpielern(n){ return "von "+n+(n===1?" Spieler":" Spielern"); }
+  function balken(a,b,ga,gb){
+    var t=a+b;
+    $(ga).style.width=(t?a/t*100:0)+"%";
+    $(gb).style.width=(t?b/t*100:0)+"%";
+  }
+  /* Geld */
+  var mon=money();
+  $("stand").textContent=eur(st.all);
+  balken(st.paid,st.open,"barPaid","barOpen");
   $("txtPaid").textContent=eur(st.paid)+" bezahlt";
   $("txtOpen").textContent=eur(st.open)+" offen";
-  $("cntE").textContent=st.n+" Einträge";
-  $("cntP").textContent=st.people+" Spieler";
+  $("cntMoney").textContent=mon.length?(mon.length+(mon.length===1?" Strafe ":" Strafen ")+vonSpielern(leute(mon))):"Noch keine Strafen";
+  show($("bestandRow"),st.spent>0);
+  $("bestandLbl").textContent="Kassenbestand nach "+eur(st.spent)+" Ausgaben";
+  $("bestandVal").textContent=eur(st.bestand);
+  $("bestandVal").style.setProperty("color",st.bestand<0?V.rust:V.amber,"important");
+  /* Kisten */
+  var ce=crateE(), geliefert=st.crates-st.cratesOpen;
   $("crateBig").textContent=st.crates;
-  $("crateOpen").textContent=st.cratesOpen?(st.cratesOpen+" noch nicht geliefert"):"alles geliefert";
+  balken(geliefert,st.cratesOpen,"barDel","barCOpen");
+  $("txtDel").textContent=geliefert+" geliefert";
+  $("txtCOpen").textContent=st.cratesOpen+" offen";
+  $("cntCrates").textContent=ce.length?(ce.length+(ce.length===1?" Kistenverstoß ":" Kistenverstöße ")+vonSpielern(leute(ce))):"Noch keine Kisten";
   $("logoImg").src=S.logo||DEFAULT_LOGO;
   show($("logoReset"),!!S.logo);
   $("soundBtn").textContent=S.sound?"🔔":"🔕";
@@ -1281,26 +1472,86 @@ function render(){
   show($("shareOpen"), S.entries.some(function(e){return !e.paid;}));
   show($("emptyBanner"), S.entries.length===0);
 }
+var selNames=[], newActive=false;
 function renderNames(){
-  var ns=names(),sel=$("nameSel");
-  show(sel,ns.length>0); sel.innerHTML="";
-  ns.forEach(function(n){var o=document.createElement("option");o.value=n;o.textContent=n;sel.appendChild(o);});
-  var o2=document.createElement("option"); o2.value="__neu__"; o2.textContent="+ Neuer Spieler";
-  sel.appendChild(o2);
-  if(!form.name&&ns.length) form.name=ns[0];
-  sel.value=ns.indexOf(form.name)>=0?form.name:"__neu__";
-  show($("nameNew"),ns.length===0||sel.value==="__neu__");
+  var ns=names(), box=$("nameChips"); box.innerHTML="";
+  if(!ns.length) newActive=true;
+  ns.forEach(function(n){
+    var b=document.createElement("button"); b.type="button";
+    b.className="pill"+(selNames.indexOf(n)>=0?" on":"");
+    b.textContent=n; b.onclick=function(){ toggleName(n); };
+    box.appendChild(b);
+  });
+  if(!editId&&ns.length){
+    var nb=document.createElement("button"); nb.type="button";
+    nb.className="pill neu"+(newActive?" on":""); nb.textContent="+ Neu";
+    nb.onclick=function(){ newActive=!newActive; renderNames(); if(newActive) setTimeout(function(){ $("nameNew").focus(); },60); };
+    box.appendChild(nb);
+  }
+  show($("nameNew"),newActive&&!editId);
+  $("nameHint").textContent=editId?"":"mehrere möglich";
+  syncTileHint();
+}
+function toggleName(n){
+  if(editId) selNames=[n];
+  else { var i=selNames.indexOf(n); if(i>=0) selNames.splice(i,1); else selNames.push(n); }
+  if(selNames.length===1){
+    var k=S.roster.filter(function(r){return r.name===selNames[0];})[0];
+    if(k){ form.age=k.ageGroup; paintSeg($("segAge"),form.age); }
+  }
+  show($("warn"),false);
+  renderNames();
+}
+function selectedNames(){
+  var arr=selNames.slice(), nn=$("nameNew").value.trim();
+  if(nn){ var hit=names().filter(function(x){return x.toLowerCase()===nn.toLowerCase();})[0]; if(hit) nn=hit; }
+  if(!editId&&newActive&&nn&&arr.indexOf(nn)<0) arr.push(nn);
+  return arr;
 }
 function renderRuleSel(){
   var sel=$("ruleSel"); var cur=sel.value; sel.innerHTML="";
   S.rules.forEach(function(r){
-    var o=document.createElement("option"); o.value=r.id;
-    o.textContent=r.label+" ("+(r.kind==="kiste"?kisten(r.crates||1):eur(r.amount||0))+")";
-    sel.appendChild(o);
+    var o=document.createElement("option"); o.value=r.id; o.textContent=r.label; sel.appendChild(o);
   });
   var o2=document.createElement("option"); o2.value="__frei__"; o2.textContent="Eigener Verstoß";
   sel.appendChild(o2);
-  sel.value=cur&&(cur==="__frei__"||S.rules.some(function(r){return r.id===cur;}))?cur:(S.rules[0]?S.rules[0].id:"__frei__");
+  sel.value=(cur&&(cur==="__frei__"||S.rules.some(function(r){return r.id===cur;})))?cur:"";
+  renderTiles();
+}
+function renderTiles(){
+  var box=$("ruleTiles"); if(!box) return; box.innerHTML="";
+  var cur=$("ruleSel").value;
+  S.rules.forEach(function(r){
+    box.appendChild(makeTile(r.id,r.label,r.kind==="kiste"?("🍺 "+kisten(r.crates||1)):eur(r.amount||0),
+      r.kind==="kiste",cur===r.id,false));
+  });
+  box.appendChild(makeTile("__frei__","Eigener Verstoß","frei eingeben",false,cur==="__frei__",true));
+  syncTileHint();
+}
+function makeTile(id,label,preis,kiste,on,frei){
+  var b=document.createElement("button"); b.type="button";
+  b.className="tile"+(kiste?" kiste":"")+(frei?" frei":"")+(on?" on":"");
+  var t=document.createElement("b"); t.textContent=label;
+  var p=document.createElement("span"); p.textContent=preis;
+  b.appendChild(t); b.appendChild(p);
+  b.onclick=function(){ pickTile(id); };
+  return b;
+}
+function pickTile(id){
+  $("ruleSel").value=id;
+  $("ruleSel").onchange();
+  renderTiles();
+  show($("warn"),false);
+  if(id==="__frei__"){ showDetails(true); setTimeout(function(){ $("ruleText").focus(); },60); return; }
+  if(!editId&&selectedNames().length) submit();      /* Schnelleintrag: Spieler + Kachel genügt */
+}
+function syncTileHint(){
+  var el=$("tileHint"); if(!el) return;
+  el.textContent=editId?"":(selectedNames().length?"Antippen trägt direkt ein":"erst oben Spieler wählen");
+}
+function showDetails(on){
+  show($("detailsBox"),on);
+  $("detailsBtn").textContent=on?"Details ausblenden":"Details anzeigen";
 }
 function applyRule(id){
   var r=S.rules.filter(function(x){return x.id===id;})[0];
@@ -1313,7 +1564,7 @@ function applyRule(id){
 }
 function syncKind(){
   var isK=form.kind==="kiste";
-  show($("moneyBox"),!isK); show($("crateBox"),isK);
+  show($("moneyBox"),!isK); show($("crateBox"),isK); show($("methodWrap"),!isK);
   $("paidCap").textContent=isK?"Schon geliefert?":"Schon bezahlt?";
   paintSeg($("segKind"),isK?"Kiste":"Geld");
 }
@@ -1324,65 +1575,57 @@ function renderList(){
   if(filter==="Bezahlt") arr=arr.filter(function(e){return e.paid;});
   if(filter==="Kisten") arr=arr.filter(function(e){return e.kind==="kiste";});
   show($("empty"),arr.length===0);
+  show($("swipeHint"),arr.length>0);
   show($("wipe"),S.entries.length>0);
-  $("wipe").textContent=wipeArmed?"Alles löschen – nochmal tippen zum Bestätigen"
-    :"Saison abschließen und alles löschen";
-  $("wipe").style.color=wipeArmed?C.rust:C.dim;
-  $("wipe").style.borderColor=wipeArmed?C.rust:C.line;
+  $("wipe").textContent=wipeArmed?"Wirklich alles löschen? Nochmal tippen":"Saison abschließen und alles löschen";
+  $("wipe").style.color=wipeArmed?V.rust:V.dim;
+  $("wipe").style.borderColor=wipeArmed?V.rust:V.line;
 
   arr.forEach(function(e){
-    var li=document.createElement("li");
-    var top=document.createElement("div");
-    top.style.cssText="display:flex;gap:12px;align-items:flex-start";
+    var li=document.createElement("li"); li.className="sw";
+    var bg=swipeBg(e.paid?"Wieder offen":(e.kind==="kiste"?"✓ Geliefert":"✓ Bezahlt"),"Löschen");
+    var fg=document.createElement("div"); fg.className="swFg";
+    var top=document.createElement("div"); top.style.cssText="display:flex;gap:12px;align-items:flex-start";
     var dot=document.createElement("span"); dot.className="dot"; dot.style.background=colorOf(e.name);
     var body=document.createElement("div"); body.style.cssText="flex:1;min-width:0";
-
-    var h=document.createElement("div");
-    h.style.cssText="display:flex;justify-content:space-between;gap:12px";
-    var n1=document.createElement("span"); n1.style.cssText="font-weight:600;font-size:16px";
-    n1.textContent=e.name;
+    var h=document.createElement("div"); h.style.cssText="display:flex;justify-content:space-between;gap:12px";
+    var n1=document.createElement("span"); n1.style.cssText="font-weight:600;font-size:16px"; n1.textContent=e.name;
     var n2=document.createElement("span"); n2.style.cssText="font-weight:700;font-size:16px";
     n2.textContent=e.kind==="kiste"?("🍺 "+kisten(e.crates||1)):eur(e.amount);
     h.appendChild(n1); h.appendChild(n2);
-
     var chips=document.createElement("div");
-    chips.style.cssText="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center";
-    function chip(txt,col){var s=document.createElement("span");s.className="chip";s.textContent=txt;
-      if(col)s.style.color=col;return s;}
+    chips.style.cssText="display:flex;flex-wrap:wrap;gap:8px;margin-top:7px;align-items:center";
+    function chip(txt,col){ var c=document.createElement("span"); c.className="chip"; c.textContent=txt;
+      if(col) c.style.color=col; return c; }
     chips.appendChild(chip(e.ageGroup,AGE_COLOR[e.ageGroup]));
-    if(e.kind!=="kiste") chips.appendChild(chip(e.method,METHOD_COLOR[e.method]));
+    if(e.kind!=="kiste"&&e.method) chips.appendChild(chip(e.method,METHOD_COLOR[e.method]));
     var pb=document.createElement("button"); pb.className="chip solid";
     pb.textContent=e.paid?(e.kind==="kiste"?"geliefert":"bezahlt"):"offen";
     pb.style.background=e.paid?C.mint:C.rust;
-    pb.onclick=function(){
-      e.paid=!e.paid;
-      if(e.paid) playFor(e);      /* Klingeln bzw. Einschenken beim Begleichen */
-      save(); render();
-    };
+    pb.onclick=function(ev){ ev.stopPropagation(); togglePaid(e); };
     chips.appendChild(pb);
-    var dt=document.createElement("span"); dt.className="lbl"; dt.style.fontSize="12px";
-    dt.textContent=dLabel(e.date); chips.appendChild(dt);
-
+    var dt=document.createElement("span"); dt.className="lbl"; dt.style.fontSize="12px"; dt.textContent=dLabel(e.date);
+    chips.appendChild(dt);
     body.appendChild(h); body.appendChild(chips);
-    if(e.rule){
-      var p=document.createElement("p"); p.className="lbl";
-      p.style.cssText="font-size:14px;margin:8px 0 0"; p.textContent=e.rule; body.appendChild(p);
-    }
-    var acts=document.createElement("div"); acts.style.cssText="display:flex;gap:14px;margin-top:8px";
-    var ed=document.createElement("button"); ed.className="link"; ed.textContent="Bearbeiten";
-    ed.onclick=function(){startEdit(e);};
-    var dl=document.createElement("button"); dl.className="link";
-    if(confirmDel===e.id){dl.textContent="Wirklich löschen";dl.style.color=C.rust;dl.style.fontWeight="700";}
-    else dl.textContent="Löschen";
-    dl.onclick=function(){
-      if(confirmDel===e.id){
-        S.entries=S.entries.filter(function(x){return x.id!==e.id;});
-        confirmDel=null; if(editId===e.id) resetForm(); save(); render();
-      } else { confirmDel=e.id; renderList(); }
-    };
-    acts.appendChild(ed); acts.appendChild(dl); body.appendChild(acts);
-    top.appendChild(dot); top.appendChild(body); li.appendChild(top); list.appendChild(li);
+    if(e.rule){ var r=document.createElement("div"); r.className="lbl"; r.style.cssText="font-size:14px;margin-top:6px";
+      r.textContent=e.rule; body.appendChild(r); }
+    top.appendChild(dot); top.appendChild(body); fg.appendChild(top);
+    li.appendChild(bg); li.appendChild(fg); list.appendChild(li);
+    attachSwipe(fg,bg,function(){ togglePaid(e); },function(){ deleteEntry(e.id); },function(){ startEdit(e); });
   });
+}
+function togglePaid(e){
+  var snap=snapshot();
+  e.paid=!e.paid; if(e.paid) playFor(e);
+  save(); render();
+  toast(e.name+": "+(e.paid?(e.kind==="kiste"?"geliefert":"bezahlt"):"wieder offen"),function(){ restoreSnap(snap); });
+}
+function deleteEntry(id){
+  var snap=snapshot(), e=S.entries.filter(function(x){return x.id===id;})[0];
+  S.entries=S.entries.filter(function(x){return x.id!==id;});
+  if(editId===id) closeSheet("sheetEntry");
+  save(); render();
+  toast((e?e.name+": ":"")+"Eintrag gelöscht",function(){ restoreSnap(snap); });
 }
 function renderCharts(){
   drawBoard($("cvPerson"),specFor("person"));
@@ -1415,7 +1658,7 @@ function renderRang(){
     p.textContent=i<3?medals[i]:(i+1)+".";
     var nm=document.createElement("span"); nm.className="rankName"; nm.textContent=n+"  ›";
     nm.style.cursor="pointer"; nm.onclick=function(){ openCard(n); };
-    var v=document.createElement("span"); v.style.fontWeight="700"; v.style.color=C.amber;
+    var v=document.createElement("span"); v.style.fontWeight="700"; v.style.color=V.amber;
     v.textContent=eur(st.perSum[n]);
     r.appendChild(p); r.appendChild(nm); r.appendChild(v); c1.appendChild(r);
   });
@@ -1643,7 +1886,7 @@ function renderCards(){
     var pb=document.createElement("button"); pb.className="chip solid";
     pb.textContent=e.paid?(e.kind==="kiste"?"geliefert":"bezahlt"):"offen";
     pb.style.background=e.paid?C.mint:C.rust;
-    pb.onclick=function(){ e.paid=!e.paid; if(e.paid) playFor(e); save(); render(); };
+    pb.onclick=function(){ togglePaid(e); };
     m.appendChild(pb); m.appendChild(d); li.appendChild(m);
     ul.appendChild(li);
   });
@@ -1654,50 +1897,52 @@ function renderEx(){
   show($("exEmpty"),arr.length===0);
   $("exTotal").textContent=arr.length?eur(spentSum()):"";
   arr.forEach(function(x){
-    var li=document.createElement("li");
-    var h=document.createElement("div");
-    h.style.cssText="display:flex;justify-content:space-between;gap:12px";
+    var li=document.createElement("li"); li.className="sw";
+    var bg=swipeBg("","Löschen");
+    var fg=document.createElement("div"); fg.className="swFg";
+    var h=document.createElement("div"); h.style.cssText="display:flex;justify-content:space-between;gap:12px";
     var a=document.createElement("span"); a.style.cssText="font-weight:600;font-size:16px"; a.textContent=x.what;
-    var b=document.createElement("span"); b.style.cssText="font-weight:700;font-size:16px;color:"+C.rust;
+    var b=document.createElement("span"); b.style.cssText="font-weight:700;font-size:16px;color:var(--rust)";
     b.textContent="− "+eur(x.amount);
-    h.appendChild(a); h.appendChild(b); li.appendChild(h);
+    h.appendChild(a); h.appendChild(b); fg.appendChild(h);
     var d=document.createElement("div"); d.className="lbl"; d.style.cssText="font-size:13px;margin-top:4px";
-    d.textContent=dLabel(x.date); li.appendChild(d);
-    var acts=document.createElement("div"); acts.style.cssText="display:flex;gap:14px;margin-top:8px";
-    var ed=document.createElement("button"); ed.className="link"; ed.textContent="Bearbeiten";
-    ed.onclick=function(){
-      exEdit=x.id; $("exWhat").value=x.what; $("exAmount").value=String(x.amount).replace(".",",");
-      $("exDate").value=x.date||isoToday();
-      $("exTitle").textContent="Ausgabe ändern"; $("exSave").textContent="Änderung speichern";
-      $("exCard").style.borderColor=C.amber; show($("exCancel"),true);
-      window.scrollTo({top:0,behavior:"smooth"});
-    };
-    var dl=document.createElement("button"); dl.className="link";
-    if(exConfirm===x.id){ dl.textContent="Wirklich löschen"; dl.style.color=C.rust; dl.style.fontWeight="700"; }
-    else dl.textContent="Löschen";
-    dl.onclick=function(){
-      if(exConfirm===x.id){
-        S.expenses=S.expenses.filter(function(y){return y.id!==x.id;});
-        exConfirm=null; if(exEdit===x.id) resetEx(); save(); render();
-      } else { exConfirm=x.id; renderEx(); }
-    };
-    acts.appendChild(ed); acts.appendChild(dl); li.appendChild(acts);
-    ul.appendChild(li);
+    d.textContent=dLabel(x.date); fg.appendChild(d);
+    li.appendChild(bg); li.appendChild(fg); ul.appendChild(li);
+    attachSwipe(fg,bg,null,function(){ deleteExpense(x.id); },function(){ openExpenseSheet(x); });
   });
+}
+function openExpenseSheet(x){
+  resetEx();
+  if(x&&x.id){
+    exEdit=x.id; $("exWhat").value=x.what; $("exAmount").value=String(x.amount).replace(".",",");
+    $("exDate").value=x.date||isoToday();
+    $("exTitle").textContent="Ausgabe ändern"; $("exSave").textContent="Änderung sichern";
+    show($("exDel"),true);
+  }
+  openSheet("sheetExpense");
+}
+function deleteExpense(id){
+  var snap=snapshot();
+  S.expenses=S.expenses.filter(function(y){return y.id!==id;});
+  if(exEdit===id) closeSheet("sheetExpense");
+  save(); render();
+  toast("Ausgabe gelöscht",function(){ restoreSnap(snap); });
 }
 function resetEx(){
   exEdit=null; $("exWhat").value=""; $("exAmount").value=""; $("exDate").value=isoToday();
-  $("exTitle").textContent="Ausgabe erfassen"; $("exSave").textContent="Ausgabe eintragen";
-  $("exCard").style.borderColor=C.line; show($("exCancel"),false); show($("exWarn"),false);
+  $("exTitle").textContent="Neue Ausgabe"; $("exSave").textContent="Ausgabe eintragen";
+  show($("exDel"),false); show($("exWarn"),false);
 }
 function submitEx(){
   var what=$("exWhat").value.trim(), a=parseAmount($("exAmount").value), d=$("exDate").value||isoToday();
   if(!what){ $("exWarn").textContent="Bitte angeben, wofür das Geld ausgegeben wurde."; show($("exWarn"),true); return; }
   if(a<=0){ $("exWarn").textContent="Betrag eintragen, z. B. 45,80."; show($("exWarn"),true); return; }
-  var rec={id:exEdit||nid(), what:what, amount:a, date:d};
+  var snap=snapshot(), war=exEdit;
+  var rec={id:exEdit||nid(),what:what,amount:a,date:d};
   if(exEdit) S.expenses=S.expenses.map(function(y){return y.id===exEdit?rec:y;});
   else S.expenses.unshift(rec);
-  resetEx(); save(); render();
+  closeSheet("sheetExpense"); save(); render();
+  toast(war?"Ausgabe geändert":("Ausgabe: "+what+" – "+eur(a)),function(){ restoreSnap(snap); });
 }
 function renderRules(){
   var ul=$("rulesList"); ul.innerHTML="";
@@ -1718,16 +1963,18 @@ function renderRules(){
       $("rCrates").value=String(r.crates||1);
       $("rFormTitle").textContent="Regel ändern";
       $("rSave").textContent="Änderung speichern";
-      $("ruleCard").style.borderColor=C.amber;
+      $("ruleCard").style.borderColor=V.amber;
       show($("rCancel"),true); syncRKind();
       window.scrollTo({top:0,behavior:"smooth"});
     };
     var d1=document.createElement("button"); d1.className="link"; d1.textContent="Löschen";
-    d1.style.color=C.rust;
+    d1.style.color=V.rust;
     d1.onclick=function(){
+      var snap=snapshot();
       S.rules=S.rules.filter(function(x){return x.id!==r.id;});
       if(!S.rules.length) S.rules=DEFAULT_RULES.slice();
       save(); renderRuleSel(); renderRules();
+      toast("Regel „"+r.label+"“ gelöscht",function(){ restoreSnap(snap); });
     };
     li.appendChild(t); li.appendChild(e1); li.appendChild(d1); ul.appendChild(li);
   });
@@ -1752,7 +1999,7 @@ function renderAudio(){
   [["geld","Kassenklingeln","Bei Geldstrafen"],["kiste","Bier","Bei technischen Fouls"]].forEach(function(r){
     var eigen=!!(S.audio&&S.audio[r[0]]);
     var d=document.createElement("div");
-    d.style.cssText="padding:12px 0;border-bottom:1px solid "+C.line;
+    d.style.cssText="padding:12px 0;border-bottom:0.5px solid "+V.line;
     var t=document.createElement("div");
     t.innerHTML='<div style="font-weight:600;font-size:15px">'+r[1]+'</div>';
     var sub=document.createElement("div"); sub.className="lbl"; sub.style.fontSize="13px";
@@ -1767,7 +2014,7 @@ function renderAudio(){
     row.appendChild(b1); row.appendChild(b2);
     if(eigen){
       var b3=document.createElement("button"); b3.className="link"; b3.textContent="Zurücksetzen";
-      b3.style.color=C.rust;
+      b3.style.color=V.rust;
       b3.onclick=function(){ S.audio[r[0]]=""; save(); renderAudio(); };
       row.appendChild(b3);
     }
@@ -1782,69 +2029,83 @@ function syncRKind(){
 
 /* ---------- Formular ---------- */
 function resetForm(){
-  editId=null; form.paid=true; form.method="Bar";
-  var ns=names(); form.name=ns.length?ns[0]:"";
-  var k=S.roster.filter(function(r){return r.name===form.name;})[0];
-  form.age=k?k.ageGroup:"U40";
-  $("amount").value=""; $("crates").value="1"; $("nameNew").value="";
-  $("formTitle").textContent="Neuer Eintrag";
-  $("save").textContent="In die Kasse eintragen";
-  $("formCard").style.borderColor=C.line;
-  show($("cancel"),false); show($("warn"),false);
+  editId=null; selNames=[]; newActive=(names().length===0);
+  form.paid=(S.lastPaid===undefined)?true:!!S.lastPaid;         /* merkt sich die letzte Wahl */
+  form.method=(METHODS.indexOf(S.lastMethod)>=0)?S.lastMethod:"Bar";
+  form.age="U40"; form.kind="geld";
+  $("amount").value=""; $("crates").value="1"; $("nameNew").value=""; $("ruleText").value="";
+  $("formTitle").textContent="Neuer Verstoß";
+  $("save").textContent="In die Kasse eintragen"; $("saveTop").textContent="Eintragen";
+  show($("delEntry"),false); show($("warn"),false); showDetails(false);
   paintSeg($("segAge"),form.age); paintSeg($("segMethod"),form.method);
   paintSeg($("segPaid"),form.paid?"Ja":"Nein");
-  renderNames(); renderRuleSel();
-  if(S.rules[0]) applyRule(S.rules[0].id); else { form.kind="geld"; syncKind(); }
+  renderRuleSel(); $("ruleSel").value=""; renderTiles();
+  syncKind(); renderNames();
   addRuleFlag=false; syncAddRule();
 }
+function openEntrySheet(){ resetForm(); openSheet("sheetEntry"); }
 function startEdit(e){
-  editId=e.id; form.name=e.name; form.age=e.ageGroup; form.method=e.method||"Bar";
-  form.paid=e.paid; form.kind=e.kind||"geld";
+  resetForm();
+  editId=e.id; selNames=[e.name]; newActive=false;
+  form.age=e.ageGroup; form.method=e.method||"Bar"; form.paid=e.paid; form.kind=e.kind||"geld";
   $("amount").value=String(e.amount||0).replace(".",",");
   $("crates").value=String(e.crates||1);
   var treffer=S.rules.filter(function(r){return r.label===e.rule;})[0];
   $("ruleSel").value=treffer?treffer.id:"__frei__";
   $("ruleText").value=treffer?e.rule:stripStrafe(e.rule);
-  $("nameNew").value=e.name;
   $("formTitle").textContent="Eintrag ändern";
-  $("save").textContent="Änderung speichern";
-  $("formCard").style.borderColor=C.amber;
-  show($("cancel"),true);
+  $("save").textContent="Änderung sichern"; $("saveTop").textContent="Sichern";
+  show($("delEntry"),true); showDetails(true);
   paintSeg($("segAge"),form.age); paintSeg($("segMethod"),form.method);
   paintSeg($("segPaid"),form.paid?"Ja":"Nein");
-  syncKind(); renderNames(); addRuleFlag=false; syncAddRule();
-  window.scrollTo({top:0,behavior:"smooth"});
+  syncKind(); renderTiles(); renderNames(); addRuleFlag=false; syncAddRule();
+  openSheet("sheetEntry");
 }
+function warnMsg(t){ $("warn").textContent=t; show($("warn"),true); }
 function submit(){
-  var ns=names(), sel=$("nameSel");
-  var name=(ns.length===0||sel.value==="__neu__")?$("nameNew").value.trim():sel.value;
-  if(!name){ $("warn").textContent="Name fehlt."; show($("warn"),true); return; }
+  var list=selectedNames();
+  if(!list.length){ warnMsg("Wer war's? Oben einen Spieler antippen."); return; }
+  if(!$("ruleSel").value){ warnMsg("Was war's? Einen Verstoß antippen."); return; }
   var isK=form.kind==="kiste";
   var val=isK?0:parseAmount($("amount").value);
   var cr=isK?Math.max(1,parseInt2($("crates").value||"1")):0;
-  if(!isK&&val<=0){ $("warn").textContent="Betrag eintragen, z. B. 5 oder 7,50.";
-    show($("warn"),true); return; }
+  if(!isK&&val<=0){ showDetails(true); warnMsg("Betrag eintragen, z. B. 5 oder 7,50."); return; }
   show($("warn"),false);
+  var snap=snapshot();
 
   var ruleTxt=$("ruleText").value.trim();
   if($("ruleSel").value==="__frei__"){
     var basis0=stripStrafe(ruleTxt)||"Eigener Verstoß";
-    if(addRuleFlag && !S.rules.some(function(r){return r.label.toLowerCase()===basis0.toLowerCase();})){
-      S.rules.push({id:nid(), label:basis0, kind:form.kind, amount:val, crates:cr});
+    if(addRuleFlag&&!S.rules.some(function(r){return r.label.toLowerCase()===basis0.toLowerCase();})){
+      S.rules.push({id:nid(),label:basis0,kind:form.kind,amount:val,crates:cr});
     }
     ruleTxt=basis0+" ("+strafeText(isK,val,cr)+")";
   }
-  var old=editId?S.entries.filter(function(x){return x.id===editId;})[0]:null;
-  var rec={id:editId||nid(), name:name, kind:form.kind, amount:val, crates:cr,
-    ageGroup:form.age, method:isK?"":form.method, paid:form.paid,
-    rule:ruleTxt, date:old?old.date:new Date().toISOString()};
+  var titel=stripStrafe(ruleTxt)||"Eintrag";
+
   if(editId){
+    var name=list[0], old=S.entries.filter(function(x){return x.id===editId;})[0];
+    var rec={id:editId,name:name,kind:form.kind,amount:val,crates:cr,ageGroup:form.age,
+      method:isK?"":form.method,paid:form.paid,rule:ruleTxt,date:old?old.date:new Date().toISOString()};
     S.entries=S.entries.map(function(x){return x.id===editId?rec:x;});
     if(old&&!old.paid&&rec.paid) playFor(rec);
+    S.roster=S.roster.filter(function(r){return r.name!==name;}).concat([{name:name,ageGroup:form.age}]);
+    closeSheet("sheetEntry"); save(); render();
+    toast("Änderung gesichert",function(){ restoreSnap(snap); });
+    return;
   }
-  else { S.entries.unshift(rec); if(isK) playBier(); else playKaching(); }
-  S.roster=S.roster.filter(function(r){return r.name!==name;}).concat([{name:name,ageGroup:form.age}]);
-  resetForm(); form.name=name; save(); render();
+  var jetzt=new Date().toISOString();
+  list.forEach(function(name){
+    var ro=S.roster.filter(function(r){return r.name===name;})[0];
+    var age=(list.length===1||!ro)?form.age:ro.ageGroup;
+    S.entries.unshift({id:nid(),name:name,kind:form.kind,amount:val,crates:cr,ageGroup:age,
+      method:isK?"":form.method,paid:form.paid,rule:ruleTxt,date:jetzt});
+    S.roster=S.roster.filter(function(r){return r.name!==name;}).concat([{name:name,ageGroup:age}]);
+  });
+  if(isK) playBier(); else playKaching();
+  S.lastPaid=form.paid; S.lastMethod=form.method;
+  closeSheet("sheetEntry"); save(); render();
+  toast((list.length===1?list[0]:list.length+" Spieler")+": "+titel,function(){ restoreSnap(snap); });
 }
 function submitRule(){
   var label=$("rTitle").value.trim();
@@ -1864,7 +2125,7 @@ function resetRuleForm(){
   $("rTitle").value=""; $("rAmount").value=""; $("rCrates").value="1";
   $("rFormTitle").textContent="Regel hinzufügen";
   $("rSave").textContent="Regel speichern";
-  $("ruleCard").style.borderColor=C.line;
+  $("ruleCard").style.borderColor=V.line;
   show($("rCancel"),false); show($("rWarn"),false); syncRKind();
 }
 
@@ -1978,15 +2239,7 @@ $("soundBtn").onclick=function(){
   if(S.sound){ unlockAudio(); playKaching(); setTimeout(playBier,700); }
   save();
 };
-$("nameSel").onchange=function(){
-  var v=$("nameSel").value;
-  show($("nameNew"),v==="__neu__");
-  if(v!=="__neu__"){
-    form.name=v;
-    var k=S.roster.filter(function(r){return r.name===v;})[0];
-    if(k){ form.age=k.ageGroup; paintSeg($("segAge"),form.age); }
-  }
-};
+
 $("ruleSel").onchange=function(){
   var v=$("ruleSel").value;
   if(v==="__frei__"){ $("ruleText").value=""; $("ruleText").focus(); }
@@ -2028,18 +2281,25 @@ $("photoFile").onchange=function(ev){
   };
   rd.readAsDataURL(file);
 };
-$("exCancel").onclick=resetEx;
-$("cancel").onclick=function(){ resetForm(); render(); };
+$("exCancel").onclick=function(){ closeSheet("sheetExpense"); };
+$("cancel").onclick=function(){ closeSheet("sheetEntry"); };
+$("saveTop").onclick=submit;
+$("delEntry").onclick=function(){ if(editId) deleteEntry(editId); };
+$("detailsBtn").onclick=function(){ showDetails($("detailsBox").classList.contains("hide")); };
+$("nameNew").oninput=function(){ syncTileHint(); };
+$("exSaveTop").onclick=submitEx;
+$("exDel").onclick=function(){ if(exEdit) deleteExpense(exEdit); };
+$("addEntryBtn").onclick=openEntrySheet;
+$("addExpenseBtn").onclick=function(){ openExpenseSheet(); };
+$("toastUndo").onclick=function(){ var u=toastUndo; hideToast(); if(u) u(); };
+attachSheetDrag("sheetEntry"); attachSheetDrag("sheetExpense");
 $("rSave").onclick=submitRule;
 $("rCancel").onclick=resetRuleForm;
-$("backup").onclick=backup;
-$("restoreBtn").onclick=function(){ $("restoreFile").click(); };
 $("copyBtn").onclick=function(){ openText("export"); };
 $("bannerPaste").onclick=function(){ openText("import"); };
 $("pasteBtn").onclick=function(){ openText("import"); };
 $("txtClose").onclick=function(){ show($("txtOverlay"),false); };
 $("txtOverlay").onclick=function(ev){ if(ev.target===$("txtOverlay")) show($("txtOverlay"),false); };
-$("restoreFile").onchange=restore;
 $("audioFile").onchange=function(ev){
   var file=ev.target.files&&ev.target.files[0]; ev.target.value="";
   if(!file||!audioTarget) return;
@@ -2054,24 +2314,37 @@ $("audioFile").onchange=function(ev){
   rd.readAsDataURL(file);
 };
 $("wipe").onclick=function(){
-  if(wipeArmed){ S.entries=[]; S.roster=[]; S.expenses=[]; wipeArmed=false; resetForm(); resetEx(); save(); render(); }
+  if(wipeArmed){
+    var snap=snapshot();
+    S.entries=[]; S.roster=[]; S.expenses=[]; wipeArmed=false; resetForm(); resetEx(); save(); render();
+    toast("Saison gelöscht",function(){ restoreSnap(snap); },9000);
+  }
   else { wipeArmed=true; renderList(); }
 };
 $("ovClose").onclick=closeOverlay;
 $("overlay").onclick=function(ev){ if(ev.target===$("overlay")) closeOverlay(); };
 
-var TABS=[["tabKasse","viewKasse"],["tabAusgaben","viewAusgaben"],["tabGraf","viewGraf"],["tabRang","viewRang"],["tabKarten","viewKarten"],["tabRegeln","viewRegeln"]];
+var TABS=[["tabKasse","viewKasse","Kasse"],["tabAusgaben","viewAusgaben","Ausgaben"],
+  ["tabAuswertung","viewAuswertung","Auswertung"],["tabKarten","viewKarten","Karten"],["tabMehr","viewMehr","Mehr"]];
+var currentTab="viewKasse";
 TABS.forEach(function(t){
   $(t[0]).onclick=function(){
-    TABS.forEach(function(x){
-      $(x[0]).classList.toggle("on",x[0]===t[0]);
-      show($(x[1]),x[1]===t[1]);
-    });
-    if(t[1]==="viewGraf"||t[1]==="viewRang") renderCharts();
-    if(t[1]==="viewRang") renderRang();
+    TABS.forEach(function(x){ $(x[0]).classList.toggle("on",x[0]===t[0]); show($(x[1]),x[1]===t[1]); });
+    currentTab=t[1]; $("pageTitle").textContent=t[2];
+    show($("plusBtn"),t[1]==="viewKasse"||t[1]==="viewAusgaben");
+    if(t[1]==="viewAuswertung"){ renderCharts(); renderRang(); }
     if(t[1]==="viewKarten") renderCards();
+    window.scrollTo(0,0);
   };
 });
+$("plusBtn").onclick=function(){ if(currentTab==="viewAusgaben") openExpenseSheet(); else openEntrySheet(); };
+function auswSwitch(w){
+  $("auswGraf").classList.toggle("on",w==="graf"); $("auswRang").classList.toggle("on",w==="rang");
+  show($("viewGraf"),w==="graf"); show($("viewRang"),w==="rang");
+  renderCharts(); if(w==="rang") renderRang();
+}
+$("auswGraf").onclick=function(){ auswSwitch("graf"); };
+$("auswRang").onclick=function(){ auswSwitch("rang"); };
 Array.prototype.forEach.call(document.querySelectorAll("[data-share]"),function(b){
   b.onclick=function(){
     var k=b.dataset.share;
