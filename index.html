@@ -109,6 +109,9 @@
   .app .sound{color:var(--ink)!important;background:var(--board2)!important}
   .app .logoX{color:var(--dim)!important;background:var(--board2)!important}
   .app .crateBig{color:var(--mint)!important}
+  .openshare{width:100%;margin-top:12px;padding:13px;font-size:15px;font-weight:700;border-radius:12px;
+    border:0;font-family:inherit}
+  .app .openshare{color:var(--base)!important;background:var(--rust)!important}
 </style>
 </head>
 <body>
@@ -129,19 +132,22 @@
   </header>
 
   <div class="card">
-    <div class="lbl">Kassenstand</div>
+    <div class="lbl" id="standLbl">Kassenbestand</div>
     <div class="stand" id="stand">0,00 €</div>
     <div class="bar"><div id="barPaid" style="background:var(--mint)"></div><div id="barOpen" style="background:var(--rust)"></div></div>
     <div class="row"><span id="txtPaid" style="color:var(--mint)"></span><span id="txtOpen" style="color:var(--rust)"></span></div>
-    <div class="meta"><span id="cntE"></span><span id="cntP"></span></div>
+    <div class="meta"><span id="cntA"></span><span id="cntE"></span><span id="cntP"></span></div>
     <div class="crates">
       <div><span class="crateBig" id="crateBig">0</span> <span class="lbl">Kisten insgesamt</span></div>
       <span class="lbl" id="crateOpen"></span>
     </div>
   </div>
 
+  <button class="openshare hide" id="shareOpen">Offene Posten in WhatsApp teilen</button>
+
   <nav>
     <button class="tab on" id="tabKasse">Erfassen</button>
+    <button class="tab" id="tabAusgaben">Ausgaben</button>
     <button class="tab" id="tabGraf">Grafiken</button>
     <button class="tab" id="tabRang">Rangliste</button>
     <button class="tab" id="tabRegeln">Katalog</button>
@@ -167,6 +173,7 @@
       <label><span class="cap">Regelverstoß</span>
         <select id="ruleSel"></select>
         <input type="text" id="ruleText" placeholder="Verstoß beschreiben" style="margin-top:8px">
+        <button type="button" class="link hide" id="addRuleBtn" style="margin-top:12px;font-size:14px"></button>
       </label>
 
       <label><span class="cap">Strafe</span><div class="segs" id="segKind"></div></label>
@@ -220,6 +227,30 @@
     </div>
   </section>
 
+  <!-- ============ AUSGABEN ============ -->
+  <section id="viewAusgaben" class="hide" style="padding-top:16px">
+    <div class="card" id="exCard">
+      <h2 id="exTitle">Ausgabe erfassen</h2>
+      <label><span class="cap">Wofür</span>
+        <input type="text" id="exWhat" placeholder="z. B. Grillabend, Bowling, Trikotwäsche"></label>
+      <label><span class="cap">Betrag</span>
+        <input type="text" id="exAmount" inputmode="decimal" placeholder="z. B. 45,80"></label>
+      <label><span class="cap">Datum</span>
+        <input type="date" id="exDate" style="min-height:48px"></label>
+      <p class="warn hide" id="exWarn"></p>
+      <div style="display:flex;gap:8px">
+        <button class="go" id="exSave">Ausgabe eintragen</button>
+        <button class="ghost hide" id="exCancel">Abbrechen</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:26px 0 12px">
+      <h2 style="margin:0">Ausgaben</h2>
+      <span id="exTotal" style="font-weight:700;color:var(--rust)"></span>
+    </div>
+    <ul id="exList"></ul>
+    <p id="exEmpty" class="lbl" style="font-size:15px">Noch keine Ausgaben eingetragen.</p>
+  </section>
+
   <!-- ============ GRAFIKEN ============ -->
   <section id="viewGraf" class="hide" style="padding-top:16px">
     <span class="cap lbl" style="display:block;margin-bottom:8px">Grundlage der Auswertung</span>
@@ -231,8 +262,14 @@
       <button class="share" data-share="age">Als Bild teilen</button></div>
     <div style="margin-bottom:24px"><canvas class="board" id="cvMethod"></canvas>
       <button class="share" data-share="method">Als Bild teilen</button></div>
+    <div style="margin-bottom:24px"><canvas class="board" id="cvMonthMoney"></canvas>
+      <button class="share" data-share="monthMoney">Als Bild teilen</button></div>
     <div style="margin-bottom:24px" id="crateWrap"><canvas class="board" id="cvCrates"></canvas>
       <button class="share" data-share="crates">Als Bild teilen</button></div>
+    <div style="margin-bottom:24px" id="crateAgeWrap"><canvas class="board" id="cvCratesAge"></canvas>
+      <button class="share" data-share="cratesAge">Als Bild teilen</button></div>
+    <div style="margin-bottom:24px" id="crateMonthWrap"><canvas class="board" id="cvMonthCrates"></canvas>
+      <button class="share" data-share="monthCrates">Als Bild teilen</button></div>
 
     <button class="textshare" id="shareText">Zahlen als Text in WhatsApp schicken</button>
   </section>
@@ -309,7 +346,8 @@ var C = {base:"#10201B",board:"#17302A",board2:"#1D3A33",line:"#2B5147",
          ink:"#F2EDE1",dim:"#8FA79C",amber:"#DFA24E",mint:"#79C98D",rust:"#E0653A"};
 var SLICE = ["#DFA24E","#79C98D","#CE7F41","#5BA4CF","#C98BB9","#8FBF63",
              "#E4776B","#6FCFC3","#B8A3E0","#E8C87A","#9AD1D4","#D98CA0"];
-var METHODS = ["Bar","PayPal","Überwiesen","Wallet"];
+var METHODS = ["Bar","PayPal","Überwiesen"];
+var METHOD_ORDER = ["Bar","PayPal","Überwiesen","Wallet"];  /* Wallet nur noch für alte Einträge */
 var METHOD_COLOR = {Bar:"#79C98D",PayPal:"#5BA4CF","Überwiesen":"#B8A3E0",Wallet:"#DFA24E"};
 var AGE_COLOR = {"Ü40":"#CE7F41","U40":"#5BA4CF"};
 var CLUB = "DJK Nieder-Olm – fly high";
@@ -332,8 +370,9 @@ var DEFAULT_RULES = [
 ];
 
 /* ---------- Zustand ---------- */
-var S = {entries:[], roster:[], rules:DEFAULT_RULES.slice(), logo:"", sound:true,
+var S = {entries:[], roster:[], expenses:[], rules:DEFAULT_RULES.slice(), logo:"", sound:true,
          audio:{geld:"",kiste:""}};
+var exEdit=null, exConfirm=null, addRuleFlag=false;
 var form = {name:"", age:"U40", method:"Bar", paid:true, kind:"geld"};
 var rForm = {kind:"geld", editId:null};
 var editId=null, filter="Alle", basis="Alle Einträge", confirmDel=null, wipeArmed=false, logoObj=null;
@@ -353,6 +392,21 @@ function dLabel(iso){return new Date(iso).toLocaleDateString("de-DE",
   {day:"2-digit",month:"2-digit",year:"2-digit"});}
 function today(){return new Date().toLocaleDateString("de-DE",
   {day:"2-digit",month:"2-digit",year:"numeric"});}
+function syncAddRule(){
+  var frei=$("ruleSel").value==="__frei__";
+  if(!frei) addRuleFlag=false;
+  show($("addRuleBtn"),frei);
+  $("addRuleBtn").textContent=(addRuleFlag?"☑":"☐")+" Als neue Regel in den Katalog aufnehmen";
+  $("addRuleBtn").style.setProperty("color", addRuleFlag?C.amber:C.dim, "important");
+}
+function strafeText(isK,val,cr){ return isK?kisten(cr):eur(val); }
+/* Entfernt eine angehängte Strafe wie „(2,00 €)" oder „(1 Kiste)", andere Klammern bleiben */
+function stripStrafe(t){ return String(t||"").replace(/\s*\([^()]*(€|Kiste|Kisten)\)\s*$/,"").trim(); }
+function spentSum(){ return (S.expenses||[]).reduce(function(s,x){return s+(x.amount||0);},0); }
+function isoToday(){
+  var d=new Date();
+  return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+}
 function nid(){return String(Date.now())+Math.random().toString(36).slice(2,6);}
 
 /* ---------- Töne ---------- */
@@ -680,6 +734,7 @@ function renderStore(){
 function adopt(d){
   S.entries = Array.isArray(d.entries)?d.entries:[];
   S.roster  = Array.isArray(d.roster)?d.roster:[];
+  S.expenses= Array.isArray(d.expenses)?d.expenses:[];
   S.rules   = Array.isArray(d.rules)&&d.rules.length?d.rules:DEFAULT_RULES.slice();
   S.logo    = typeof d.logo==="string"?d.logo:"";
   S.sound   = d.sound===false?false:true;
@@ -713,7 +768,7 @@ function backup(){
   merkeSicherung();
 }
 function backupText(){
-  return JSON.stringify({entries:S.entries,roster:S.roster,rules:S.rules,sound:S.sound});
+  return JSON.stringify({entries:S.entries,roster:S.roster,expenses:S.expenses,rules:S.rules,sound:S.sound});
 }
 function normalize(){
   S.entries.forEach(function(e){
@@ -758,6 +813,7 @@ function doPaste(){
     if(!d||typeof d!=="object") throw new Error("kein Objekt");
     if(Array.isArray(d.entries)) S.entries=d.entries;
     if(Array.isArray(d.roster)) S.roster=d.roster;
+    if(Array.isArray(d.expenses)) S.expenses=d.expenses;
     if(Array.isArray(d.rules)&&d.rules.length) S.rules=d.rules;
     if(d.sound!==undefined) S.sound=(d.sound!==false);
     normalize();
@@ -872,19 +928,105 @@ function drawBoard(cv,spec){
   foot(ctx,W,PAD,H);
 }
 
+/* Monatsverlauf: senkrechte Balken, auf Wunsch zwei Reihen nebeneinander */
+var MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+function monthKey(iso){ var d=new Date(iso); return d.getFullYear()*100+(d.getMonth()+1); }
+function monthRange(keys){
+  if(!keys.length) return [];
+  var now=new Date(), nowK=now.getFullYear()*100+now.getMonth()+1;
+  var min=Math.min.apply(null,keys), max=Math.max(Math.max.apply(null,keys),nowK);
+  var out=[], y=Math.floor(min/100), m=min%100;
+  while(y*100+m<=max){ out.push(y*100+m); m++; if(m>12){m=1;y++;} }
+  return out.slice(-12);
+}
+function sumByMonth(list,months,dateFn,valFn){
+  return months.map(function(k){
+    return list.reduce(function(s,x){ return s+(monthKey(dateFn(x))===k?valFn(x):0); },0);
+  });
+}
+function specMonthly(kind){
+  if(kind==="monthCrates"){
+    var ce=crateE(), mk=monthRange(ce.map(function(e){return monthKey(e.date);}));
+    var ct=ce.reduce(function(s,e){return s+crt(e);},0);
+    return {title:"Kisten pro Monat",subtitle:kisten(ct)+" insgesamt",
+      note:ce.length+(ce.length===1?" Kistenverstoß":" Kistenverstöße"),months:mk,
+      series:[{name:"Kisten",color:C.mint,values:sumByMonth(ce,mk,function(e){return e.date;},crt)}],
+      short:function(v){return String(v);}};
+  }
+  var be=basisEntries(), ex=S.expenses||[];
+  var keys=be.map(function(e){return monthKey(e.date);}).concat(ex.map(function(x){return monthKey(x.date);}));
+  var mk2=monthRange(keys), tot=be.reduce(function(s,e){return s+amt(e);},0);
+  var series=[{name:"Strafen",color:C.amber,values:sumByMonth(be,mk2,function(e){return e.date;},amt)}];
+  if(ex.length) series.push({name:"Ausgaben",color:C.rust,
+    values:sumByMonth(ex,mk2,function(x){return x.date;},function(x){return x.amount||0;})});
+  return {title:"Strafen pro Monat",subtitle:eur(tot)+" "+(basis==="Nur bezahlt"?"bezahlt":"verhängt"),
+    note:basis+(ex.length?" · daneben die Ausgaben":""),months:mk2,series:series,
+    short:function(v){ return (Math.round(v)===v?v:v.toFixed(2).replace(".",","))+" €"; }};
+}
+function drawMonthly(cv,spec){
+  var logo=logoOrNull(), sc=2, W=780, PAD=40, headH=158, chartH=330;
+  var legendH=spec.series.length>1?46:0, footH=70, H=headH+chartH+legendH+footH;
+  cv.width=W*sc; cv.height=H*sc;
+  var ctx=cv.getContext("2d"); ctx.setTransform(sc,0,0,sc,0,0);
+  ctx.fillStyle=C.base; ctx.fillRect(0,0,W,H);
+  head(ctx,W,PAD,spec,logo);
+  var months=spec.months;
+  if(!months.length){
+    ctx.fillStyle=C.dim; ctx.font=f(400,20); ctx.textAlign="center";
+    ctx.fillText("Noch nichts eingetragen.",W/2,headH+60); ctx.textAlign="left";
+    foot(ctx,W,PAD,H); return;
+  }
+  var x0=PAD, x1=W-PAD, top=headH+46, bottom=headH+chartH-40;
+  var max=1;
+  spec.series.forEach(function(sr){ sr.values.forEach(function(v){ if(v>max) max=v; }); });
+  var years={}; months.forEach(function(k){ years[Math.floor(k/100)]=1; });
+  var multi=Object.keys(years).length>1;
+  var n=months.length, slot=(x1-x0)/n, ns=spec.series.length;
+  var gap=slot*0.24, bw=(slot-gap)/ns, small=n>7;
+
+  ctx.strokeStyle=C.line; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x0,bottom+0.5); ctx.lineTo(x1,bottom+0.5); ctx.stroke();
+
+  months.forEach(function(k,i){
+    spec.series.forEach(function(sr,j){
+      var v=sr.values[i]; if(v<=0) return;
+      var h=Math.max(4,(v/max)*(bottom-top));
+      var bx=x0+i*slot+gap/2+j*bw, w=Math.max(4,bw-3);
+      ctx.fillStyle=sr.color; rr(bx,bottom-h,w,h,5,ctx); ctx.fill();
+      ctx.fillStyle=C.ink; ctx.font=f(600,small?12:15); ctx.textAlign="center";
+      ctx.fillText(spec.short(v),bx+w/2,bottom-h-9);
+    });
+    var y=Math.floor(k/100), m=k%100;
+    ctx.fillStyle=C.dim; ctx.font=f(500,small?13:16); ctx.textAlign="center";
+    ctx.fillText(MON[m-1],x0+i*slot+slot/2,bottom+24);
+    if(multi){ ctx.font=f(400,12); ctx.fillText("'"+String(y).slice(2),x0+i*slot+slot/2,bottom+40); }
+  });
+  ctx.textAlign="left";
+  if(ns>1){
+    var ly=headH+chartH+14, lx=PAD;
+    spec.series.forEach(function(sr){
+      ctx.fillStyle=sr.color; rr(lx,ly,18,18,4,ctx); ctx.fill();
+      ctx.fillStyle=C.ink; ctx.font=f(500,17); ctx.textBaseline="middle";
+      ctx.fillText(sr.name,lx+28,ly+9); ctx.textBaseline="alphabetic";
+      lx+=28+ctx.measureText(sr.name).width+34;
+    });
+  }
+  foot(ctx,W,PAD,H);
+}
+
 /* Saison-Rückblick */
 function drawReview(cv){
   var st=stats(), lines=[];
   lines.push(["Gesamtsumme", eur(st.all)]);
   lines.push(["Davon offen", eur(st.open)]);
+  if(st.spent>0){ lines.push(["Für Teamevents ausgegeben", eur(st.spent)]);
+                  lines.push(["Kassenbestand", eur(st.bestand)]); }
   if(st.crates>0) lines.push(["Kisten", kisten(st.crates)+(st.cratesOpen?" ("+st.cratesOpen+" offen)":"")]);
   if(st.king) lines.push(["👑 Spender Nr. 1", st.king.name+" – "+eur(st.king.sum)]);
   if(st.busiest) lines.push(["Häufigster Sünder", st.busiest.name+" – "+st.busiest.n+"×"]);
   if(st.crateKing) lines.push(["🍻 Kistenmeister", st.crateKing.name+" – "+kisten(st.crateKing.n)]);
   if(st.topRule) lines.push(["Beliebtester Verstoß", st.topRule.label+" ("+st.topRule.n+"×)"]);
   lines.push(["Ü40 gegen U40", eur(st.ue)+"  zu  "+eur(st.u)]);
-  if(st.moral) lines.push(["🏅 Zahlungsmoral", st.moral.name]);
-  if(st.slow) lines.push(["Schlusslicht", st.slow.name+" – "+eur(st.slow.open)+" offen"]);
 
   var sc=2,W=780,PAD=40,headH=158,rowH=54,footH=70;
   var H=headH+18+lines.length*rowH+footH;
@@ -934,15 +1076,22 @@ function specFor(kind){
   if(kind==="crates"){
     var ce=crateE(), ct=ce.reduce(function(s,e){return s+crt(e);},0);
     return {title:"Kistenzähler",subtitle:kisten(ct)+" fällig",
-      note:ce.length+(ce.length===1?" technisches Foul":" technische Fouls"),
+      note:ce.length+(ce.length===1?" Kistenverstoß":" Kistenverstöße"),
       data:group(ce,function(e){return e.name;},crt,colorOf),total:ct,fmt:kisten};
+  }
+  if(kind==="cratesAge"){
+    var ca=crateE(), cat=ca.reduce(function(s,e){return s+crt(e);},0);
+    return {title:"Kisten: Ü40 gegen U40",subtitle:kisten(cat)+" fällig",
+      note:ca.length+(ca.length===1?" Kistenverstoß":" Kistenverstöße"),
+      data:group(ca,function(e){return e.ageGroup;},crt,
+        function(l){return AGE_COLOR[l]||C.amber;},["Ü40","U40"]),total:cat,fmt:kisten};
   }
   var d,t;
   if(kind==="person"){ d=group(be,function(e){return e.name;},amt,colorOf); t="Wer hat wie viel drin"; }
   else if(kind==="age"){ d=group(be,function(e){return e.ageGroup;},amt,
       function(l){return AGE_COLOR[l]||C.amber;},["Ü40","U40"]); t="Ü40 gegen U40"; }
   else { d=group(be,function(e){return e.method;},amt,
-      function(l){return METHOD_COLOR[l]||C.amber;},METHODS); t="Wie bezahlt wurde"; }
+      function(l){return METHOD_COLOR[l]||C.amber;},METHOD_ORDER); t="Wie bezahlt wurde"; }
   return {title:t,subtitle:eur(total)+" in der Kasse",note:note,data:d,total:total};
 }
 
@@ -983,7 +1132,8 @@ function stats(){
     crates:ce.reduce(function(s,e){return s+crt(e);},0),
     cratesOpen:ce.filter(function(e){return !e.paid;}).reduce(function(s,e){return s+crt(e);},0),
     king:king,busiest:busiest,slow:slow,topRule:topRule,crateKing:crateKing,moral:moral,
-    ue:ue,u:u,perSum:perSum,perCnt:perCnt,perOpen:perOpen};
+    ue:ue,u:u,perSum:perSum,perCnt:perCnt,perOpen:perOpen,
+    spent:spentSum(), bestand:paid-spentSum()};
 }
 
 /* ---------- Segmente ---------- */
@@ -1012,7 +1162,10 @@ function show(el,yes){el.classList.toggle("hide",!yes);}
 /* ---------- Oberfläche ---------- */
 function render(){
   var st=stats();
-  $("stand").textContent=eur(st.all);
+  $("stand").textContent=eur(st.bestand);
+  $("stand").style.setProperty("color", st.bestand<0?C.rust:C.amber, "important");
+  $("cntA").textContent=st.spent>0?(eur(st.spent)+" ausgegeben"):"";
+  show($("cntA"), st.spent>0);
   var sh=st.all>0?st.paid/st.all:0;
   $("barPaid").style.width=(sh*100)+"%";
   $("barOpen").style.width=((1-sh)*100)+"%";
@@ -1026,7 +1179,8 @@ function render(){
   show($("logoReset"),!!S.logo);
   $("soundBtn").textContent=S.sound?"🔔":"🔕";
   renderNames(); renderRuleSel(); renderList(); renderCharts(); renderRang(); renderRules(); renderAudio();
-  renderBackupInfo();
+  renderBackupInfo(); renderEx();
+  show($("shareOpen"), S.entries.some(function(e){return !e.paid;}));
   show($("emptyBanner"), S.entries.length===0);
 }
 function renderNames(){
@@ -1135,6 +1289,11 @@ function renderCharts(){
   var hasC=crateE().length>0;
   show($("crateWrap"),hasC);
   if(hasC) drawBoard($("cvCrates"),specFor("crates"));
+  show($("crateAgeWrap"),hasC);
+  if(hasC) drawBoard($("cvCratesAge"),specFor("cratesAge"));
+  drawMonthly($("cvMonthMoney"),specMonthly("monthMoney"));
+  show($("crateMonthWrap"),hasC);
+  if(hasC) drawMonthly($("cvMonthCrates"),specMonthly("monthCrates"));
   drawReview($("cvReview"));
 }
 function renderRang(){
@@ -1171,13 +1330,62 @@ function renderRang(){
   box.appendChild(c2);
 
   var c3=document.createElement("div"); c3.className="card"; c3.style.marginTop="16px";
-  var h='<h3>Ehre und Schande</h3>';
-  if(st.moral) h+='<div class="rank"><span class="rankPos">🏅</span><span class="rankName">Zahlungsmoral<br><span class="lbl">alles beglichen</span></span><span style="font-weight:700">'+st.moral.name+'</span></div>';
-  if(st.slow) h+='<div class="rank"><span class="rankPos">🐌</span><span class="rankName">Schlusslicht<br><span class="lbl">'+eur(st.slow.open)+' offen</span></span><span style="font-weight:700">'+st.slow.name+'</span></div>';
+  var h='<h3>Ehrentafel</h3>';
   if(st.busiest) h+='<div class="rank"><span class="rankPos">🎯</span><span class="rankName">Häufigster Sünder<br><span class="lbl">'+st.busiest.n+' Einträge</span></span><span style="font-weight:700">'+st.busiest.name+'</span></div>';
-  if(st.crateKing) h+='<div class="rank"><span class="rankPos">🍻</span><span class="rankName">Kistenmeister<br><span class="lbl">meiste technische Fouls</span></span><span style="font-weight:700">'+st.crateKing.name+' – '+kisten(st.crateKing.n)+'</span></div>';
-  if(st.crates) h+='<div class="rank" style="border:0"><span class="rankPos">🍺</span><span class="rankName">Technische Fouls<br><span class="lbl">'+st.cratesOpen+' noch offen</span></span><span style="font-weight:700">'+kisten(st.crates)+'</span></div>';
+  if(st.crateKing) h+='<div class="rank"><span class="rankPos">🍻</span><span class="rankName">Kistenmeister<br><span class="lbl">meiste Kisten</span></span><span style="font-weight:700">'+st.crateKing.name+' – '+kisten(st.crateKing.n)+'</span></div>';
+  if(st.crates) h+='<div class="rank" style="border:0"><span class="rankPos">🍺</span><span class="rankName">Kisten gesamt<br><span class="lbl">'+st.cratesOpen+' noch offen</span></span><span style="font-weight:700">'+kisten(st.crates)+'</span></div>';
   c3.innerHTML=h; box.appendChild(c3);
+}
+function renderEx(){
+  var ul=$("exList"); ul.innerHTML="";
+  var arr=(S.expenses||[]).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+  show($("exEmpty"),arr.length===0);
+  $("exTotal").textContent=arr.length?eur(spentSum()):"";
+  arr.forEach(function(x){
+    var li=document.createElement("li");
+    var h=document.createElement("div");
+    h.style.cssText="display:flex;justify-content:space-between;gap:12px";
+    var a=document.createElement("span"); a.style.cssText="font-weight:600;font-size:16px"; a.textContent=x.what;
+    var b=document.createElement("span"); b.style.cssText="font-weight:700;font-size:16px;color:"+C.rust;
+    b.textContent="− "+eur(x.amount);
+    h.appendChild(a); h.appendChild(b); li.appendChild(h);
+    var d=document.createElement("div"); d.className="lbl"; d.style.cssText="font-size:13px;margin-top:4px";
+    d.textContent=dLabel(x.date); li.appendChild(d);
+    var acts=document.createElement("div"); acts.style.cssText="display:flex;gap:14px;margin-top:8px";
+    var ed=document.createElement("button"); ed.className="link"; ed.textContent="Bearbeiten";
+    ed.onclick=function(){
+      exEdit=x.id; $("exWhat").value=x.what; $("exAmount").value=String(x.amount).replace(".",",");
+      $("exDate").value=x.date||isoToday();
+      $("exTitle").textContent="Ausgabe ändern"; $("exSave").textContent="Änderung speichern";
+      $("exCard").style.borderColor=C.amber; show($("exCancel"),true);
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+    var dl=document.createElement("button"); dl.className="link";
+    if(exConfirm===x.id){ dl.textContent="Wirklich löschen"; dl.style.color=C.rust; dl.style.fontWeight="700"; }
+    else dl.textContent="Löschen";
+    dl.onclick=function(){
+      if(exConfirm===x.id){
+        S.expenses=S.expenses.filter(function(y){return y.id!==x.id;});
+        exConfirm=null; if(exEdit===x.id) resetEx(); save(); render();
+      } else { exConfirm=x.id; renderEx(); }
+    };
+    acts.appendChild(ed); acts.appendChild(dl); li.appendChild(acts);
+    ul.appendChild(li);
+  });
+}
+function resetEx(){
+  exEdit=null; $("exWhat").value=""; $("exAmount").value=""; $("exDate").value=isoToday();
+  $("exTitle").textContent="Ausgabe erfassen"; $("exSave").textContent="Ausgabe eintragen";
+  $("exCard").style.borderColor=C.line; show($("exCancel"),false); show($("exWarn"),false);
+}
+function submitEx(){
+  var what=$("exWhat").value.trim(), a=parseAmount($("exAmount").value), d=$("exDate").value||isoToday();
+  if(!what){ $("exWarn").textContent="Bitte angeben, wofür das Geld ausgegeben wurde."; show($("exWarn"),true); return; }
+  if(a<=0){ $("exWarn").textContent="Betrag eintragen, z. B. 45,80."; show($("exWarn"),true); return; }
+  var rec={id:exEdit||nid(), what:what, amount:a, date:d};
+  if(exEdit) S.expenses=S.expenses.map(function(y){return y.id===exEdit?rec:y;});
+  else S.expenses.unshift(rec);
+  resetEx(); save(); render();
 }
 function renderRules(){
   var ul=$("rulesList"); ul.innerHTML="";
@@ -1261,14 +1469,16 @@ function resetForm(){
   paintSeg($("segPaid"),form.paid?"Ja":"Nein");
   renderNames(); renderRuleSel();
   if(S.rules[0]) applyRule(S.rules[0].id); else { form.kind="geld"; syncKind(); }
+  addRuleFlag=false; syncAddRule();
 }
 function startEdit(e){
   editId=e.id; form.name=e.name; form.age=e.ageGroup; form.method=e.method||"Bar";
   form.paid=e.paid; form.kind=e.kind||"geld";
   $("amount").value=String(e.amount||0).replace(".",",");
   $("crates").value=String(e.crates||1);
-  $("ruleText").value=e.rule||"";
-  $("ruleSel").value="__frei__";
+  var treffer=S.rules.filter(function(r){return r.label===e.rule;})[0];
+  $("ruleSel").value=treffer?treffer.id:"__frei__";
+  $("ruleText").value=treffer?e.rule:stripStrafe(e.rule);
   $("nameNew").value=e.name;
   $("formTitle").textContent="Eintrag ändern";
   $("save").textContent="Änderung speichern";
@@ -1276,7 +1486,7 @@ function startEdit(e){
   show($("cancel"),true);
   paintSeg($("segAge"),form.age); paintSeg($("segMethod"),form.method);
   paintSeg($("segPaid"),form.paid?"Ja":"Nein");
-  syncKind(); renderNames();
+  syncKind(); renderNames(); addRuleFlag=false; syncAddRule();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function submit(){
@@ -1290,10 +1500,18 @@ function submit(){
     show($("warn"),true); return; }
   show($("warn"),false);
 
+  var ruleTxt=$("ruleText").value.trim();
+  if($("ruleSel").value==="__frei__"){
+    var basis0=stripStrafe(ruleTxt)||"Eigener Verstoß";
+    if(addRuleFlag && !S.rules.some(function(r){return r.label.toLowerCase()===basis0.toLowerCase();})){
+      S.rules.push({id:nid(), label:basis0, kind:form.kind, amount:val, crates:cr});
+    }
+    ruleTxt=basis0+" ("+strafeText(isK,val,cr)+")";
+  }
   var old=editId?S.entries.filter(function(x){return x.id===editId;})[0]:null;
   var rec={id:editId||nid(), name:name, kind:form.kind, amount:val, crates:cr,
     ageGroup:form.age, method:isK?"":form.method, paid:form.paid,
-    rule:$("ruleText").value.trim(), date:old?old.date:new Date().toISOString()};
+    rule:ruleTxt, date:old?old.date:new Date().toISOString()};
   if(editId) S.entries=S.entries.map(function(x){return x.id===editId?rec:x;});
   else { S.entries.unshift(rec); if(isK) playBier(); else playKaching(); }
   S.roster=S.roster.filter(function(r){return r.name!==name;}).concat([{name:name,ageGroup:form.age}]);
@@ -1324,7 +1542,9 @@ function resetRuleForm(){
 /* ---------- Teilen ---------- */
 function shareKind(kind,file){
   var cv=document.createElement("canvas");
-  if(kind==="review") drawReview(cv); else drawBoard(cv,specFor(kind));
+  if(kind==="review") drawReview(cv);
+  else if(kind==="monthMoney"||kind==="monthCrates") drawMonthly(cv,specMonthly(kind));
+  else drawBoard(cv,specFor(kind));
   cv.toBlob(function(blob){
     if(!blob) return;
     var f2=new File([blob],file,{type:"image/png"});
@@ -1345,10 +1565,47 @@ function fallback(blob,file){
   $("ovImg").src=url; $("ovSave").href=url; $("ovSave").download=file;
   show($("overlay"),true);
 }
+function offenText(){
+  var per={}, order=[], sumG=0, sumK=0;
+  S.entries.filter(function(e){return !e.paid;})
+    .sort(function(a,b){return new Date(a.date)-new Date(b.date);})
+    .forEach(function(e){
+      if(!per[e.name]){ per[e.name]={geld:0,kisten:0,items:[]}; order.push(e.name); }
+      if(e.kind==="kiste") per[e.name].kisten+=crt(e); else per[e.name].geld+=amt(e);
+      per[e.name].items.push(e);
+    });
+  if(!order.length) return "";
+  order.sort(function(a,b){return a.localeCompare(b,"de");});
+  var lines=["💰 *Offene Posten*","DJK Nieder-Olm fly high – Stand "+today(),""];
+  order.forEach(function(n){
+    var p=per[n], teile=[];
+    sumG+=p.geld; sumK+=p.kisten;
+    if(p.geld) teile.push(eur(p.geld));
+    if(p.kisten) teile.push("🍺 "+kisten(p.kisten));
+    lines.push("*"+n+"*: "+teile.join(" + "));
+    p.items.forEach(function(e){
+      var d=new Date(e.date).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});
+      var was=stripStrafe(e.rule)||"ohne Angabe";
+      var wert=e.kind==="kiste"?kisten(crt(e)):eur(amt(e));
+      lines.push("   • "+was+" – "+wert+" ("+d+")");
+    });
+  });
+  var gesamt=[]; if(sumG) gesamt.push(eur(sumG)); if(sumK) gesamt.push(kisten(sumK));
+  lines.push(""); lines.push("Summe offen: "+gesamt.join(" und "));
+  return lines.join("\n");
+}
+function shareOpen(){
+  var t=offenText(); if(!t) return;
+  var wa=function(){ window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank"); };
+  if(navigator.share){
+    navigator.share({text:t}).catch(function(err){ if(!err||err.name!=="AbortError") wa(); });
+  } else wa();
+}
 function shareText(){
   var st=stats();
   var lines=[CLUB+" – Mannschaftskasse","Stand "+today(),"",
-    "Gesamt: "+eur(st.all),"Bezahlt: "+eur(st.paid),"Offen: "+eur(st.open)];
+    "Strafen gesamt: "+eur(st.all),"Bezahlt: "+eur(st.paid),"Offen: "+eur(st.open)];
+  if(st.spent>0){ lines.push("Ausgegeben: "+eur(st.spent)); lines.push("Kassenbestand: "+eur(st.bestand)); }
   if(st.crates) lines.push("Kisten: "+kisten(st.crates)+" ("+st.cratesOpen+" offen)");
   lines.push("");
   if(st.king) lines.push("👑 "+st.king.name+" führt mit "+eur(st.king.sum));
@@ -1404,8 +1661,12 @@ $("ruleSel").onchange=function(){
   var v=$("ruleSel").value;
   if(v==="__frei__"){ $("ruleText").value=""; $("ruleText").focus(); }
   else applyRule(v);
+  syncAddRule();
 };
+$("addRuleBtn").onclick=function(){ addRuleFlag=!addRuleFlag; syncAddRule(); };
 $("save").onclick=submit;
+$("exSave").onclick=submitEx;
+$("exCancel").onclick=resetEx;
 $("cancel").onclick=function(){ resetForm(); render(); };
 $("rSave").onclick=submitRule;
 $("rCancel").onclick=resetRuleForm;
@@ -1431,13 +1692,13 @@ $("audioFile").onchange=function(ev){
   rd.readAsDataURL(file);
 };
 $("wipe").onclick=function(){
-  if(wipeArmed){ S.entries=[]; S.roster=[]; wipeArmed=false; resetForm(); save(); render(); }
+  if(wipeArmed){ S.entries=[]; S.roster=[]; S.expenses=[]; wipeArmed=false; resetForm(); resetEx(); save(); render(); }
   else { wipeArmed=true; renderList(); }
 };
 $("ovClose").onclick=closeOverlay;
 $("overlay").onclick=function(ev){ if(ev.target===$("overlay")) closeOverlay(); };
 
-var TABS=[["tabKasse","viewKasse"],["tabGraf","viewGraf"],["tabRang","viewRang"],["tabRegeln","viewRegeln"]];
+var TABS=[["tabKasse","viewKasse"],["tabAusgaben","viewAusgaben"],["tabGraf","viewGraf"],["tabRang","viewRang"],["tabRegeln","viewRegeln"]];
 TABS.forEach(function(t){
   $(t[0]).onclick=function(){
     TABS.forEach(function(x){
@@ -1452,11 +1713,12 @@ Array.prototype.forEach.call(document.querySelectorAll(".share"),function(b){
   b.onclick=function(){
     var k=b.dataset.share;
     var names={person:"kasse-anteile.png",age:"kasse-ue40-u40.png",method:"kasse-bezahlweg.png",
-      crates:"kasse-kisten.png",review:"kasse-rueckblick.png"};
+      crates:"kasse-kisten.png",cratesAge:"kasse-kisten-ue40-u40.png",monthMoney:"kasse-monate.png",monthCrates:"kasse-kisten-monate.png",review:"kasse-rueckblick.png"};
     shareKind(k,names[k]||"kasse.png");
   };
 });
 $("shareText").onclick=shareText;
+$("shareOpen").onclick=shareOpen;
 
 ["Alle","Offen","Bezahlt","Kisten"].forEach(function(fl){
   var b=document.createElement("button"); b.className="filt"+(fl===filter?" on":"");
@@ -1495,6 +1757,7 @@ if("serviceWorker" in navigator && window.self===window.top && location.protocol
   loadLogoObj();
   resetRuleForm();
   resetForm();
+  resetEx();
   render();
   await save();     /* Probeschreiben: zeigt sofort, welcher Speicher trägt */
   renderStore();
