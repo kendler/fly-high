@@ -150,6 +150,7 @@
     <button class="tab" id="tabAusgaben">Ausgaben</button>
     <button class="tab" id="tabGraf">Grafiken</button>
     <button class="tab" id="tabRang">Rangliste</button>
+    <button class="tab" id="tabKarten">Karten</button>
     <button class="tab" id="tabRegeln">Katalog</button>
   </nav>
 
@@ -281,6 +282,30 @@
       <button class="share" data-share="review">Rückblick teilen</button></div>
   </section>
 
+  <!-- ============ KARTEN ============ -->
+  <section id="viewKarten" class="hide" style="padding-top:16px">
+    <div id="cardPicker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px"></div>
+    <p id="cardEmpty" class="lbl" style="font-size:15px">Sobald Spieler eingetragen sind, bekommt hier jeder seine Karte.</p>
+    <div id="cardView" class="hide">
+      <canvas id="cvCard" style="width:100%;max-width:380px;height:auto;display:block;margin:0 auto"></canvas>
+      <div style="max-width:380px;margin:0 auto">
+        <button class="share" id="cardShare">Karte teilen</button>
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:12px">
+          <button class="link" id="cardPhoto">Foto wählen</button>
+          <button class="link hide" id="cardPhotoDel">Foto entfernen</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <h3>Offen</h3>
+        <div id="cardOpen"></div>
+        <button class="openshare hide" id="cardRemind">Erinnerung per WhatsApp schicken</button>
+      </div>
+      <h2 style="margin:24px 0 10px">Alle Einträge</h2>
+      <ul id="cardList"></ul>
+    </div>
+    <input type="file" id="photoFile" accept="image/*" class="hide">
+  </section>
+
   <!-- ============ KATALOG ============ -->
   <section id="viewRegeln" class="hide" style="padding-top:16px">
     <div class="card" id="ruleCard">
@@ -307,6 +332,7 @@
         Eigene Aufnahmen ersetzen die eingebauten Klänge. Kurze MP3- oder M4A-Dateien bis etwa
         ein Megabyte.</p>
       <div id="audioRows"></div>
+      <p id="audioState" class="lbl" style="font-size:13px;margin:14px 0 0"></p>
     </div>
     <input type="file" id="audioFile" accept="audio/*" class="hide">
   </section>
@@ -370,7 +396,7 @@ var DEFAULT_RULES = [
 ];
 
 /* ---------- Zustand ---------- */
-var S = {entries:[], roster:[], expenses:[], rules:DEFAULT_RULES.slice(), logo:"", sound:true,
+var S = {entries:[], roster:[], expenses:[], photos:{}, rules:DEFAULT_RULES.slice(), logo:"", sound:true,
          audio:{geld:"",kiste:""}};
 var exEdit=null, exConfirm=null, addRuleFlag=false;
 var form = {name:"", age:"U40", method:"Bar", paid:true, kind:"geld"};
@@ -411,30 +437,49 @@ function nid(){return String(Date.now())+Math.random().toString(36).slice(2,6);}
 
 /* ---------- Töne ---------- */
 var AC=null, AUDIO_READY=false;
+/* Wie ein Musikprogramm abspielen – dann greift der Stummschalter nicht */
+function audioSessionPlayback(){
+  try{
+    if(navigator.audioSession && navigator.audioSession.type!=="playback")
+      navigator.audioSession.type="playback";
+  }catch(e){}
+}
 function ac(){
   try{
+    audioSessionPlayback();
     if(!AC){
       var K=window.AudioContext||window.webkitAudioContext;
       if(!K) return null;
       AC=new K();
     }
-    if(AC.state==="suspended"&&AC.resume) AC.resume();
+    /* iOS meldet nach dem Hintergrund „interrupted" statt „suspended" */
+    if(AC.state!=="running"&&AC.resume) AC.resume();
   }catch(e){ AC=null; }
   return AC;
 }
+/* Erst abspielen, wenn die Tonausgabe wirklich läuft */
+function withAudio(fn){
+  var c=ac(); if(!c) return;
+  if(c.state==="running"){ fn(); return; }
+  var pr=c.resume&&c.resume();
+  if(pr&&pr.then) pr.then(fn,fn); else fn();
+  setTimeout(renderAudioState,400);
+}
 /* iOS gibt den Ton erst nach der ersten Berührung frei */
 function unlockAudio(){
-  if(AUDIO_READY) return;
   var c=ac(); if(!c) return;
+  if(AUDIO_READY&&c.state==="running") return;
   try{
     var b=c.createBuffer(1,1,22050);
     var src=c.createBufferSource(); src.buffer=b;
     src.connect(c.destination); src.start(0);
-    if(c.state!=="suspended") AUDIO_READY=true;
+    if(c.state==="running") AUDIO_READY=true;
   }catch(e){}
   try{ ensureBuffer("geld"); ensureBuffer("kiste"); }catch(e){}
 }
 document.addEventListener("touchend",unlockAudio,true);
+/* Nach dem Zurückkehren in die App die Tonausgabe neu freigeben */
+document.addEventListener("visibilitychange",function(){ if(!document.hidden) AUDIO_READY=false; });
 document.addEventListener("click",unlockAudio,true);
 /* --- Bausteine --- */
 function noiseBuf(c,dur){
@@ -656,8 +701,9 @@ function synthBier(){
 }
 
 /* Datei bevorzugen, sonst den erzeugten Klang nehmen */
-function playKaching(){ if(!S.sound) return; if(!playFile("geld")) synthKaching(); }
-function playBier(){ if(!S.sound) return; if(!playFile("kiste")) synthBier(); }
+function playKaching(){ if(!S.sound) return; withAudio(function(){ if(!playFile("geld")) synthKaching(); }); }
+function playBier(){ if(!S.sound) return; withAudio(function(){ if(!playFile("kiste")) synthBier(); }); }
+function playFor(e){ if(e.kind==="kiste") playBier(); else playKaching(); }
 
 /* ---------- Speichern ---------- */
 var memCopy=null;
@@ -735,6 +781,7 @@ function adopt(d){
   S.entries = Array.isArray(d.entries)?d.entries:[];
   S.roster  = Array.isArray(d.roster)?d.roster:[];
   S.expenses= Array.isArray(d.expenses)?d.expenses:[];
+  S.photos  = (d.photos&&typeof d.photos==="object")?d.photos:{};
   S.rules   = Array.isArray(d.rules)&&d.rules.length?d.rules:DEFAULT_RULES.slice();
   S.logo    = typeof d.logo==="string"?d.logo:"";
   S.sound   = d.sound===false?false:true;
@@ -1179,7 +1226,8 @@ function render(){
   show($("logoReset"),!!S.logo);
   $("soundBtn").textContent=S.sound?"🔔":"🔕";
   renderNames(); renderRuleSel(); renderList(); renderCharts(); renderRang(); renderRules(); renderAudio();
-  renderBackupInfo(); renderEx();
+  renderBackupInfo(); renderEx(); renderAudioState();
+  if(!$("viewKarten").classList.contains("hide")) renderCards();
   show($("shareOpen"), S.entries.some(function(e){return !e.paid;}));
   show($("emptyBanner"), S.entries.length===0);
 }
@@ -1256,7 +1304,11 @@ function renderList(){
     var pb=document.createElement("button"); pb.className="chip solid";
     pb.textContent=e.paid?(e.kind==="kiste"?"geliefert":"bezahlt"):"offen";
     pb.style.background=e.paid?C.mint:C.rust;
-    pb.onclick=function(){ e.paid=!e.paid; save(); render(); };
+    pb.onclick=function(){
+      e.paid=!e.paid;
+      if(e.paid) playFor(e);      /* Klingeln bzw. Einschenken beim Begleichen */
+      save(); render();
+    };
     chips.appendChild(pb);
     var dt=document.createElement("span"); dt.className="lbl"; dt.style.fontSize="12px";
     dt.textContent=dLabel(e.date); chips.appendChild(dt);
@@ -1311,7 +1363,8 @@ function renderRang(){
     var r=document.createElement("div"); r.className="rank";
     var p=document.createElement("span"); p.className="rankPos";
     p.textContent=i<3?medals[i]:(i+1)+".";
-    var nm=document.createElement("span"); nm.className="rankName"; nm.textContent=n;
+    var nm=document.createElement("span"); nm.className="rankName"; nm.textContent=n+"  ›";
+    nm.style.cursor="pointer"; nm.onclick=function(){ openCard(n); };
     var v=document.createElement("span"); v.style.fontWeight="700"; v.style.color=C.amber;
     v.textContent=eur(st.perSum[n]);
     r.appendChild(p); r.appendChild(nm); r.appendChild(v); c1.appendChild(r);
@@ -1335,6 +1388,215 @@ function renderRang(){
   if(st.crateKing) h+='<div class="rank"><span class="rankPos">🍻</span><span class="rankName">Kistenmeister<br><span class="lbl">meiste Kisten</span></span><span style="font-weight:700">'+st.crateKing.name+' – '+kisten(st.crateKing.n)+'</span></div>';
   if(st.crates) h+='<div class="rank" style="border:0"><span class="rankPos">🍺</span><span class="rankName">Kisten gesamt<br><span class="lbl">'+st.cratesOpen+' noch offen</span></span><span style="font-weight:700">'+kisten(st.crates)+'</span></div>';
   c3.innerHTML=h; box.appendChild(c3);
+}
+/* ================= Spielerkarten im Quartett-Stil ================= */
+var currentCard=null, PHOTO_IMG={};
+function seasonLabel(){
+  var d=new Date(), y=d.getFullYear()%100, a=(d.getMonth()+1)>=7?y:(y+99)%100;
+  return "Saison "+("0"+a).slice(-2)+"/"+("0"+((a+1)%100)).slice(-2);
+}
+function cardCode(n){
+  var i=Math.max(0,names().indexOf(n));
+  return String.fromCharCode(65+Math.floor(i/4)%26)+(i%4+1);
+}
+function initials(n){
+  var w=String(n).trim().split(/\s+/);
+  return (w.length>1?w[0].charAt(0)+w[1].charAt(0):w[0].charAt(0)).toUpperCase();
+}
+/* Stern als Form gezeichnet – unabhängig von der Schrift */
+function drawStar(ctx,cx,cy,r,col){
+  ctx.beginPath();
+  for(var i=0;i<10;i++){
+    var a=-Math.PI/2+i*Math.PI/5, rad=i%2?r*0.45:r;
+    var x=cx+Math.cos(a)*rad, y=cy+Math.sin(a)*rad;
+    if(i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+  }
+  ctx.closePath(); ctx.fillStyle=col; ctx.fill();
+}
+function playerStats(n){
+  var es=S.entries.filter(function(e){return e.name===n;});
+  var mon=es.filter(function(e){return e.kind!=="kiste";});
+  var sum=mon.reduce(function(s,e){return s+amt(e);},0);
+  var kis=es.filter(function(e){return e.kind==="kiste";}).reduce(function(s,e){return s+crt(e);},0);
+  var allM=money().reduce(function(s,e){return s+amt(e);},0);
+  var sums={},cnts={},kiss={};
+  names().forEach(function(x){sums[x]=0;cnts[x]=0;kiss[x]=0;});
+  S.entries.forEach(function(e){
+    if(!(e.name in sums)){sums[e.name]=0;cnts[e.name]=0;kiss[e.name]=0;}
+    cnts[e.name]++;
+    if(e.kind==="kiste") kiss[e.name]+=crt(e); else sums[e.name]+=amt(e);
+  });
+  var keys=Object.keys(sums);
+  function mx(o){ return Math.max.apply(null,keys.map(function(x){return o[x];}).concat([0])); }
+  var favC={};
+  es.forEach(function(e){ var r=stripStrafe(e.rule); if(r) favC[r]=(favC[r]||0)+1; });
+  var fav=Object.keys(favC).sort(function(a,b){return favC[b]-favC[a];})[0]||"";
+  var last=es.map(function(e){return e.date;}).sort().slice(-1)[0];
+  var ro=S.roster.filter(function(r){return r.name===n;})[0];
+  return {name:n, age:ro?ro.ageGroup:(es[0]?es[0].ageGroup:"U40"), sum:sum, cnt:es.length, kis:kis,
+    share:allM?sum/allM*100:0, rank:1+keys.filter(function(x){return sums[x]>sum;}).length, of:keys.length,
+    fav:fav, last:last?dLabel(last):"", entries:es,
+    trumpSum:sum>0&&sum===mx(sums), trumpCnt:es.length>0&&es.length===mx(cnts), trumpKis:kis>0&&kis===mx(kiss)};
+}
+function photoImg(n){
+  var url=S.photos&&S.photos[n]; if(!url) return null;
+  var im=PHOTO_IMG[n];
+  if(!im||im._url!==url){
+    im=new Image(); im._url=url;
+    im.onload=function(){ if(currentCard===n) drawCard($("cvCard"),n); };
+    im.src=url; PHOTO_IMG[n]=im;
+  }
+  return (im.complete&&im.naturalWidth)?im:null;
+}
+function drawCard(cv,n){
+  var ps=playerStats(n), sc=2, W=640, H=1000, M=20;
+  var CREAM="#F2EDE1", INK="#10201B", ROW="#E6DECD", SUB="#56655E", GOLD="#B7832F";
+  var band=AGE_COLOR[ps.age]||C.amber;
+  cv.width=W*sc; cv.height=H*sc;
+  var ctx=cv.getContext("2d"); ctx.setTransform(sc,0,0,sc,0,0);
+  ctx.fillStyle=C.base; ctx.fillRect(0,0,W,H);
+
+  /* Rahmen in der Farbe der Altersklasse, innen cremefarben */
+  ctx.fillStyle=band; rr(M,M,W-2*M,H-2*M,34,ctx); ctx.fill();
+  ctx.fillStyle=CREAM; rr(M+12,M+12,W-2*M-24,H-2*M-24,24,ctx); ctx.fill();
+  var X=M+12, Y=M+12, IW=W-2*M-24;
+
+  /* Kartencode und Name */
+  ctx.fillStyle=INK; rr(X+18,Y+18,86,64,14,ctx); ctx.fill();
+  ctx.fillStyle=band; ctx.font=f(800,34); ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText(cardCode(n),X+61,Y+51);
+  ctx.textAlign="left"; ctx.fillStyle=INK; ctx.font=f(800,36);
+  ctx.fillText(clipTxt(ctx,n,IW-150),X+124,Y+40);
+  ctx.fillStyle=SUB; ctx.font=f(600,18);
+  ctx.fillText(ps.age+"   "+seasonLabel(),X+124,Y+72);
+  ctx.textBaseline="alphabetic";
+
+  /* Bild: Foto oder Initialen auf blassem Wappen */
+  var px=X+18, py=Y+100, pw=IW-36, ph=380, im=photoImg(n), lg=logoOrNull();
+  ctx.save(); rr(px,py,pw,ph,18,ctx); ctx.clip();
+  ctx.fillStyle=C.board; ctx.fillRect(px,py,pw,ph);
+  if(im){
+    var s1=Math.max(pw/im.naturalWidth,ph/im.naturalHeight);
+    var dw=im.naturalWidth*s1, dh=im.naturalHeight*s1;
+    ctx.drawImage(im,px+(pw-dw)/2,py+(ph-dh)/2,dw,dh);
+  } else {
+    if(lg){
+      var s2=Math.min(pw/lg.naturalWidth,ph/lg.naturalHeight)*0.92;
+      ctx.globalAlpha=0.11;
+      ctx.drawImage(lg,px+(pw-lg.naturalWidth*s2)/2,py+(ph-lg.naturalHeight*s2)/2,lg.naturalWidth*s2,lg.naturalHeight*s2);
+      ctx.globalAlpha=1;
+    }
+    ctx.fillStyle=C.amber; ctx.font=f(800,initials(n).length>1?150:180); ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(initials(n),px+pw/2,py+ph/2+8);
+    ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  }
+  ctx.restore();
+  if(im&&lg){
+    var s3=Math.min(76/lg.naturalWidth,76/lg.naturalHeight);
+    ctx.drawImage(lg,px+pw-lg.naturalWidth*s3-12,py+ph-lg.naturalHeight*s3-12,lg.naturalWidth*s3,lg.naturalHeight*s3);
+  }
+
+  /* Wertetabelle zum Stechen – Stern markiert den Mannschaftsbesten */
+  var rows=[
+    ["Strafen gesamt",eur(ps.sum),ps.trumpSum],
+    ["Verstöße",String(ps.cnt),ps.trumpCnt],
+    ["Kisten",String(ps.kis),ps.trumpKis],
+    ["Anteil an der Kasse",pct(ps.share,0),false],
+    ["Platz in der Tabelle",ps.rank+" von "+ps.of,ps.rank===1&&ps.sum>0],
+    ["Lieblingsverstoß",ps.fav||"–",false],
+    ["Zuletzt erwischt",ps.last||"–",false]
+  ];
+  var ty=py+ph+22, rh=52, trumpf=false;
+  rows.forEach(function(r,i){
+    var y=ty+i*rh, mid=y+(rh-4)/2;
+    if(i%2===0){ ctx.fillStyle=ROW; rr(px,y,pw,rh-4,10,ctx); ctx.fill(); }
+    ctx.textBaseline="middle"; ctx.textAlign="left";
+    ctx.fillStyle=SUB; ctx.font=f(500,19); ctx.fillText(r[0],px+16,mid);
+    ctx.textAlign="right"; ctx.fillStyle=INK; ctx.font=f(800,22);
+    var v=clipTxt(ctx,r[1],pw*0.52);
+    ctx.fillText(v,px+pw-16,mid);
+    if(r[2]){ trumpf=true; drawStar(ctx,px+pw-16-ctx.measureText(v).width-20,mid,11,GOLD); }
+    ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  });
+
+  /* Fußzeile */
+  var fy=ty+rows.length*rh+10, lx=px;
+  if(lg){
+    var s4=Math.min(40/lg.naturalWidth,40/lg.naturalHeight);
+    ctx.drawImage(lg,px,fy+4,lg.naturalWidth*s4,lg.naturalHeight*s4); lx=px+52;
+  }
+  ctx.fillStyle=SUB; ctx.font=f(600,16); ctx.fillText("DJK Nieder-Olm – fly high",lx,fy+29);
+  if(trumpf){
+    ctx.textAlign="right"; ctx.fillStyle=GOLD; ctx.fillText("Mannschaftsbester",px+pw,fy+29);
+    drawStar(ctx,px+pw-ctx.measureText("Mannschaftsbester").width-16,fy+23,9,GOLD);
+    ctx.textAlign="left";
+  }
+}
+function erinnerungText(n){
+  var es=S.entries.filter(function(e){return e.name===n&&!e.paid;})
+    .sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  if(!es.length) return "";
+  var g=0,k=0, lines=["Hallo "+n+", kurze Erinnerung aus der Mannschaftskasse 🙂",""];
+  es.forEach(function(e){
+    var d=new Date(e.date).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});
+    var wert=e.kind==="kiste"?kisten(crt(e)):eur(amt(e));
+    if(e.kind==="kiste") k+=crt(e); else g+=amt(e);
+    lines.push("• "+(stripStrafe(e.rule)||"ohne Angabe")+" – "+wert+" ("+d+")");
+  });
+  var tot=[]; if(g) tot.push(eur(g)); if(k) tot.push(kisten(k));
+  lines.push(""); lines.push("Zusammen: "+tot.join(" und ")); lines.push(""); lines.push("Danke dir!");
+  return lines.join("\n");
+}
+function openCard(n){ currentCard=n; $("tabKarten").onclick(); window.scrollTo({top:0,behavior:"smooth"}); }
+function renderCards(){
+  var ns=names(), pick=$("cardPicker"); pick.innerHTML="";
+  show($("cardEmpty"),ns.length===0); show($("cardView"),ns.length>0);
+  if(!ns.length) return;
+  if(!currentCard||ns.indexOf(currentCard)<0) currentCard=ns[0];
+  ns.forEach(function(n){
+    var b=document.createElement("button"); b.className="filt"+(n===currentCard?" on":"");
+    b.textContent=cardCode(n)+"  "+n;
+    b.onclick=function(){ currentCard=n; renderCards(); };
+    pick.appendChild(b);
+  });
+  drawCard($("cvCard"),currentCard);
+  var ps=playerStats(currentCard);
+  show($("cardPhotoDel"),!!(S.photos&&S.photos[currentCard]));
+
+  var box=$("cardOpen"); box.innerHTML="";
+  var offen=ps.entries.filter(function(e){return !e.paid;});
+  if(!offen.length){
+    box.innerHTML='<p class="lbl" style="margin:0;font-size:15px">Alles beglichen.</p>';
+  } else {
+    offen.forEach(function(e){
+      var r=document.createElement("div"); r.className="rank";
+      var a=document.createElement("span"); a.className="rankName"; a.style.fontWeight="500";
+      a.textContent=stripStrafe(e.rule)||"ohne Angabe";
+      var b=document.createElement("span"); b.style.fontWeight="700";
+      b.textContent=e.kind==="kiste"?("🍺 "+kisten(crt(e))):eur(amt(e));
+      r.appendChild(a); r.appendChild(b); box.appendChild(r);
+    });
+  }
+  show($("cardRemind"),offen.length>0);
+
+  var ul=$("cardList"); ul.innerHTML="";
+  ps.entries.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).forEach(function(e){
+    var li=document.createElement("li");
+    var h=document.createElement("div"); h.style.cssText="display:flex;justify-content:space-between;gap:12px";
+    var a=document.createElement("span"); a.style.cssText="font-weight:600;font-size:15px";
+    a.textContent=stripStrafe(e.rule)||"ohne Angabe";
+    var b=document.createElement("span"); b.style.cssText="font-weight:700;font-size:15px";
+    b.textContent=e.kind==="kiste"?("🍺 "+kisten(crt(e))):eur(amt(e));
+    h.appendChild(a); h.appendChild(b); li.appendChild(h);
+    var m=document.createElement("div"); m.style.cssText="display:flex;gap:10px;align-items:center;margin-top:6px";
+    var d=document.createElement("span"); d.className="lbl"; d.style.fontSize="12px"; d.textContent=dLabel(e.date);
+    var pb=document.createElement("button"); pb.className="chip solid";
+    pb.textContent=e.paid?(e.kind==="kiste"?"geliefert":"bezahlt"):"offen";
+    pb.style.background=e.paid?C.mint:C.rust;
+    pb.onclick=function(){ e.paid=!e.paid; if(e.paid) playFor(e); save(); render(); };
+    m.appendChild(pb); m.appendChild(d); li.appendChild(m);
+    ul.appendChild(li);
+  });
 }
 function renderEx(){
   var ul=$("exList"); ul.innerHTML="";
@@ -1421,6 +1683,14 @@ function renderRules(){
   });
 }
 var audioTarget=null;
+function renderAudioState(){
+  var el=document.getElementById("audioState"); if(!el) return;
+  var st=AC?AC.state:"noch nicht gestartet";
+  var txt={"running":"läuft","suspended":"pausiert – einmal irgendwo antippen",
+           "interrupted":"vom iPhone unterbrochen – einmal irgendwo antippen"}[st]||st;
+  var still=navigator.audioSession?" · Stummschalter wird übergangen":" · Stummschalter muss auf laut stehen";
+  el.textContent="Tonausgabe: "+txt+still;
+}
 function renderAudio(){
   var box=$("audioRows"); box.innerHTML="";
   [["geld","Kassenklingeln","Bei Geldstrafen"],["kiste","Bier","Bei technischen Fouls"]].forEach(function(r){
@@ -1512,7 +1782,10 @@ function submit(){
   var rec={id:editId||nid(), name:name, kind:form.kind, amount:val, crates:cr,
     ageGroup:form.age, method:isK?"":form.method, paid:form.paid,
     rule:ruleTxt, date:old?old.date:new Date().toISOString()};
-  if(editId) S.entries=S.entries.map(function(x){return x.id===editId?rec:x;});
+  if(editId){
+    S.entries=S.entries.map(function(x){return x.id===editId?rec:x;});
+    if(old&&!old.paid&&rec.paid) playFor(rec);
+  }
   else { S.entries.unshift(rec); if(isK) playBier(); else playKaching(); }
   S.roster=S.roster.filter(function(r){return r.name!==name;}).concat([{name:name,ageGroup:form.age}]);
   resetForm(); form.name=name; save(); render();
@@ -1544,6 +1817,7 @@ function shareKind(kind,file){
   var cv=document.createElement("canvas");
   if(kind==="review") drawReview(cv);
   else if(kind==="monthMoney"||kind==="monthCrates") drawMonthly(cv,specMonthly(kind));
+  else if(kind==="card") drawCard(cv,currentCard);
   else drawBoard(cv,specFor(kind));
   cv.toBlob(function(blob){
     if(!blob) return;
@@ -1666,6 +1940,38 @@ $("ruleSel").onchange=function(){
 $("addRuleBtn").onclick=function(){ addRuleFlag=!addRuleFlag; syncAddRule(); };
 $("save").onclick=submit;
 $("exSave").onclick=submitEx;
+$("cardShare").onclick=function(){
+  if(!currentCard) return;
+  var slug=currentCard.toLowerCase().replace(/[^a-z0-9äöüß]+/g,"-");
+  shareKind("card","karte-"+slug+".png");
+};
+$("cardRemind").onclick=function(){
+  var t=erinnerungText(currentCard); if(!t) return;
+  var wa=function(){ window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank"); };
+  if(navigator.share) navigator.share({text:t}).catch(function(err){ if(!err||err.name!=="AbortError") wa(); });
+  else wa();
+};
+$("cardPhoto").onclick=function(){ $("photoFile").click(); };
+$("cardPhotoDel").onclick=function(){ if(S.photos) delete S.photos[currentCard]; save(); renderCards(); };
+$("photoFile").onchange=function(ev){
+  var file=ev.target.files&&ev.target.files[0]; ev.target.value="";
+  if(!file||!currentCard) return;
+  var name=currentCard, rd=new FileReader();
+  rd.onload=function(){
+    var im=new Image();
+    im.onload=function(){
+      var max=420, k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));
+      var cv=document.createElement("canvas");
+      cv.width=Math.round(im.naturalWidth*k); cv.height=Math.round(im.naturalHeight*k);
+      cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);
+      if(!S.photos) S.photos={};
+      S.photos[name]=cv.toDataURL("image/jpeg",0.8);
+      save(); renderCards();
+    };
+    im.src=String(rd.result);
+  };
+  rd.readAsDataURL(file);
+};
 $("exCancel").onclick=resetEx;
 $("cancel").onclick=function(){ resetForm(); render(); };
 $("rSave").onclick=submitRule;
@@ -1698,7 +2004,7 @@ $("wipe").onclick=function(){
 $("ovClose").onclick=closeOverlay;
 $("overlay").onclick=function(ev){ if(ev.target===$("overlay")) closeOverlay(); };
 
-var TABS=[["tabKasse","viewKasse"],["tabAusgaben","viewAusgaben"],["tabGraf","viewGraf"],["tabRang","viewRang"],["tabRegeln","viewRegeln"]];
+var TABS=[["tabKasse","viewKasse"],["tabAusgaben","viewAusgaben"],["tabGraf","viewGraf"],["tabRang","viewRang"],["tabKarten","viewKarten"],["tabRegeln","viewRegeln"]];
 TABS.forEach(function(t){
   $(t[0]).onclick=function(){
     TABS.forEach(function(x){
@@ -1707,9 +2013,10 @@ TABS.forEach(function(t){
     });
     if(t[1]==="viewGraf"||t[1]==="viewRang") renderCharts();
     if(t[1]==="viewRang") renderRang();
+    if(t[1]==="viewKarten") renderCards();
   };
 });
-Array.prototype.forEach.call(document.querySelectorAll(".share"),function(b){
+Array.prototype.forEach.call(document.querySelectorAll("[data-share]"),function(b){
   b.onclick=function(){
     var k=b.dataset.share;
     var names={person:"kasse-anteile.png",age:"kasse-ue40-u40.png",method:"kasse-bezahlweg.png",
